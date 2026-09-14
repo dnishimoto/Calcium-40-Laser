@@ -69,6 +69,77 @@
 //      beam-area factor
 //
 
+//
+//  QRTLLaserSimulatorView.swift
+//  QRTL Resonating Amplifier — 3D photon-alignment laser simulator
+//
+//  Implements the three-stage QRTL laser prediction:
+//    1. Coherence efficiency gain   = newCoherence / oldCoherence
+//    2. Loss-reduction gain         = 1 + fractionReduced
+//    3. Beam-concentration gain     = 1 / areaReductionFactor
+//    combinedGain = coherenceGain * lossGain * concentrationGain
+//
+//  Default ramp targets (0.70→0.95 coherence, 25% loss reduction,
+//  50% area reduction) reproduce the document's ≈3.4× combined gain.
+//
+//  Target output: 2.94 µm (mid-infrared, invisible to the human eye —
+//  photons are rendered in a false-color deep red/orange so the beam
+//  is visible in the SceneKit view; this is a visualization choice,
+//  not a physical claim about the beam's actual color).
+//
+//  Drop this file directly into your project. No external assets needed.
+//
+
+//
+//  ContentView.swift
+//  QRTL Resonating Amplifier
+//
+//  Proposed QRTL laser / photon-alignment simulator.
+//
+//  IMPORTANT:
+//  QRTL is a proposed, unvalidated theory. The QRTL equations below are
+//  implemented as a model-defined phenomenological system. They should not
+//  be represented as experimentally established physics.
+//
+//  Pipeline:
+//
+//  QRTL phase state
+//      ↓
+//  phase closure
+//      ↓
+//  twist-current
+//      ↓
+//  resonance response
+//      ↓
+//  resonance-shell energy
+//      ↓
+//  QRTL electromagnetic coupling
+//      ↓
+//  photon phase coherence
+//      ↓
+//  modeled cavity loss
+//      ↓
+//  modeled beam-area concentration
+//      ↓
+//  laser gain
+//      ↓
+//  2.94 µm output
+//
+//  Standard physics:
+//      f = c / λ
+//      E_photon = h f
+//
+//  QRTL model quantities:
+//      phase closure
+//      twist current
+//      resonance response
+//      shell energy
+//      QRTL coupling
+//      coherence
+//      loss factor
+//      beam-area factor
+//
+
 import SwiftUI
 //
 // QRTLLaserSimulatorView.swift
@@ -250,7 +321,19 @@ struct QRTLLaserParameters {
     let photonRadius: CGFloat = 0.045
 
     // Safety timeout only.
-    let maximumSimulationDuration: Double = 8.0
+    //
+    // NOTE: This must stay comfortably above the time the QRTL
+    // model actually needs to reach resonance lock, or the
+    // simulation will always be killed right before it fires.
+    //
+    // With the current parameters, lock requires 5 consecutive
+    // stable round trips, which empirically completes around the
+    // 9th round trip (~9 * 2 * visualOneWayDuration ≈ 8.1s). The
+    // previous value of 8.0s was *shorter* than that, so the timer
+    // always stopped the sim one round trip short of lockOK ever
+    // going true for 5 consecutive rounds — the laser could never
+    // reach the fire state. 20.0s leaves real margin.
+    let maximumSimulationDuration: Double = 20.0
 }
 
 // MARK: - QRTL State
