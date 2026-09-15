@@ -140,7 +140,6 @@
 //      beam-area factor
 //
 
-import SwiftUI
 //
 // QRTLLaserSimulatorView.swift
 // QRTL Resonating Amplifier — 3D photon-alignment laser simulator
@@ -195,6 +194,662 @@ import SceneKit
 import Combine
 
 // MARK: - QRTL Parameters
+
+// MARK: - Laser Measurement / Verification
+
+enum MeasurementStatus: String {
+    case notMeasured = "NOT MEASURED"
+    case simulated = "SIMULATED"
+    case measured = "MEASURED"
+    case agreement = "AGREEMENT"
+    case disagreement = "DISAGREEMENT"
+}
+// MARK: - Laser Measurement Engine
+
+struct QRTLLaserMeasurementEngine {
+
+    static func evaluate(
+        state: QRTLState,
+        parameters: QRTLLaserParameters,
+        inputPowerWatts: Double?,
+        measuredOutputPowerWatts: Double?,
+        measuredWavelengthMeters: Double?,
+        measuredThresholdInputPowerWatts: Double?,
+        measuredLinewidthHz: Double?,
+        measuredStartupTimeSeconds: Double?,
+        measuredInputEnergyJoules: Double?,
+        measuredOutputEnergyJoules: Double?,
+        experimentalRunCount: Int,
+        reproducibleRuns: Int
+    ) -> LaserMeasurementState {
+
+        var result = LaserMeasurementState()
+
+        // --------------------------------------------------------
+        // 1. QRTL convergence
+        // --------------------------------------------------------
+
+        result.qrtlPhaseError = state.phaseError
+        result.qrtlPhaseClosure = state.phaseClosure
+        result.qrtlResonanceResponse = state.resonanceResponse
+        result.qrtlCoupling = state.coupling
+        result.qrtlCoherence = state.coherence
+        result.qrtlLocked = state.resonanceLocked
+
+        // --------------------------------------------------------
+        // 2. Physical optical gain
+        //
+        // IMPORTANT:
+        //
+        // Existing combinedGain is retained as the QRTL model
+        // metric. It is NOT silently relabeled as measured optical
+        // gain.
+        // --------------------------------------------------------
+
+        if let inputPowerWatts,
+           inputPowerWatts > 0.0 {
+
+            if let measuredOutputPowerWatts,
+               measuredOutputPowerWatts >= 0.0 {
+
+                result.measuredOpticalGain =
+                    measuredOutputPowerWatts /
+                    inputPowerWatts
+            }
+
+            // Model-defined optical prediction.
+            //
+            // This is explicitly a prediction derived from the
+            // existing QRTL gain metric.
+            result.predictedOpticalGain =
+                state.combinedGain
+
+            let gainLength =
+                max(
+                    parameters.gainEndZ -
+                    parameters.gainStartZ,
+                    1.0e-12
+                )
+
+            result.gainCoefficientPerMeter =
+                log(
+                    max(
+                        state.combinedGain,
+                        1.0e-12
+                    )
+                )
+                /
+                gainLength
+        }
+
+        // --------------------------------------------------------
+        // 3. Laser threshold
+        //
+        // Threshold is deliberately different from QRTL lock.
+        // --------------------------------------------------------
+
+        if let predictedGain =
+            result.predictedOpticalGain {
+
+            let totalLoss =
+                calculateRoundTripLoss(
+                    state: state,
+                    parameters: parameters
+                )
+
+            if totalLoss > 0.0 {
+
+                // Model-defined threshold estimate.
+                //
+                // This is not an experimentally established
+                // threshold power.
+                result.predictedThresholdInputPowerWatts =
+                    inputPowerWatts.map {
+                        $0 * totalLoss /
+                        max(predictedGain, 1.0e-12)
+                    }
+            }
+
+            result.thresholdReached =
+                predictedGain > max(
+                    totalLoss,
+                    1.0e-12
+                )
+        }
+
+        if let measuredThreshold =
+            measuredThresholdInputPowerWatts {
+
+            result.measuredThresholdInputPowerWatts =
+                measuredThreshold
+
+            if let inputPowerWatts {
+                result.thresholdReached =
+                    inputPowerWatts >= measuredThreshold
+            }
+        }
+
+        // --------------------------------------------------------
+        // 4. Input → output power
+        // --------------------------------------------------------
+
+        result.inputOpticalPowerWatts =
+            inputPowerWatts
+
+        result.outputOpticalPowerWatts =
+            measuredOutputPowerWatts
+
+        // The circulating field is a normalized model quantity.
+        //
+        // Do not turn it into watts without an independently
+        // specified/calibrated input power.
+        if let inputPowerWatts {
+
+            result.intracavityPowerWatts =
+                inputPowerWatts *
+                max(
+                    state.circulatingFieldFactor,
+                    0.0
+                )
+
+            result.absorbedPumpPowerWatts =
+                inputPowerWatts
+
+            if let output =
+                measuredOutputPowerWatts {
+
+                result.lossPowerWatts =
+                    max(
+                        inputPowerWatts - output,
+                        0.0
+                    )
+            }
+        }
+
+        // --------------------------------------------------------
+        // 5. Optical efficiency
+        // --------------------------------------------------------
+
+        if let inputEnergy =
+            measuredInputEnergyJoules,
+           inputEnergy > 0.0,
+           let outputEnergy =
+            measuredOutputEnergyJoules {
+
+            result.inputEnergyJoules =
+                inputEnergy
+
+            result.outputEnergyJoules =
+                outputEnergy
+
+            result.measuredEfficiency =
+                outputEnergy /
+                inputEnergy
+        }
+
+        if let inputPowerWatts,
+           inputPowerWatts > 0.0 {
+
+            // Model prediction uses the actual configured
+            // output-coupler transmission and QRTL state.
+            result.predictedEfficiency =
+                min(
+                    1.0,
+                    max(
+                        0.0,
+                        state.combinedGain *
+                        parameters.outputTransmission /
+                        max(
+                            state.combinedGain,
+                            1.0e-12
+                        )
+                    )
+                )
+        }
+
+        // --------------------------------------------------------
+        // 6. Calcium-40 transition characterization
+        //
+        // The app records the target as a model/reference value.
+        // No experimental Ca-40 transition is invented here.
+        // --------------------------------------------------------
+
+        result.calcium40TransitionWavelengthMeters =
+            parameters.targetWavelengthMeters
+
+        result.calcium40TransitionFrequencyHz =
+            parameters.targetFrequency
+
+        result.calcium40TransitionEnergyJoules =
+            parameters.photonEnergy
+
+        // Lifetime and linewidth remain nil until supplied by
+        // authoritative reference data or experiment.
+        result.calcium40LifetimeSeconds = nil
+        result.calcium40LinewidthHz = nil
+
+        // --------------------------------------------------------
+        // 7. Population / excitation
+        //
+        // No arbitrary Ca-40 population is created.
+        // These remain measurement inputs until an excitation
+        // model or experimental population measurement exists.
+        // --------------------------------------------------------
+
+        result.totalPopulation = nil
+        result.lowerStatePopulation = nil
+        result.upperStatePopulation = nil
+        result.excitationFraction = nil
+        result.populationInversion = nil
+
+        // --------------------------------------------------------
+        // 8. Cavity round-trip gain/loss
+        // --------------------------------------------------------
+
+        result.roundTripGain =
+            state.combinedGain
+
+        result.mirrorLoss =
+            1.0 -
+            parameters.outputReflection
+
+        result.absorptionLoss = nil
+        result.scatteringLoss = nil
+
+        result.outputCouplingLoss =
+            parameters.outputTransmission
+
+        result.roundTripLoss =
+            calculateRoundTripLoss(
+                state: state,
+                parameters: parameters
+            )
+
+        result.netRoundTripGain =
+            (result.roundTripGain ?? 0.0)
+            -
+            (result.roundTripLoss ?? 0.0)
+
+        // --------------------------------------------------------
+        // 9. QRTL energy transfer
+        //
+        // We can report the change in the model's shell-energy
+        // quantity, but this is NOT automatically joules.
+        // --------------------------------------------------------
+
+        result.energyBeforeQRTLInteractionJoules = nil
+        result.energyAfterQRTLInteractionJoules = nil
+        result.qrtlEnergyTransferredJoules = nil
+        result.qrtlInteractionRatePerSecond = nil
+
+        // --------------------------------------------------------
+        // 10. Output spectrum
+        // --------------------------------------------------------
+
+        result.predictedWavelengthMeters =
+            parameters.targetWavelengthMeters
+
+        result.measuredWavelengthMeters =
+            measuredWavelengthMeters
+
+        result.predictedLinewidthHz = nil
+        result.measuredLinewidthHz =
+            measuredLinewidthHz
+
+        result.spectralPowerWatts =
+            measuredOutputPowerWatts
+
+        // --------------------------------------------------------
+        // 11. Temporal behavior
+        // --------------------------------------------------------
+
+        if state.resonanceLocked {
+
+            result.predictedStartupTimeSeconds =
+                state.physicalElapsedTime
+        }
+
+        result.measuredStartupTimeSeconds =
+            measuredStartupTimeSeconds
+
+        // --------------------------------------------------------
+        // 12. Prediction vs experiment
+        // --------------------------------------------------------
+
+        if let measuredWavelengthMeters,
+           measuredWavelengthMeters > 0.0 {
+
+            result.wavelengthPredictionErrorPercent =
+                percentError(
+                    predicted:
+                        parameters.targetWavelengthMeters,
+                    measured:
+                        measuredWavelengthMeters
+                )
+        }
+
+        if let predictedGain =
+            result.predictedOpticalGain,
+           let measuredGain =
+            result.measuredOpticalGain {
+
+            result.powerPredictionErrorPercent =
+                percentError(
+                    predicted:
+                        predictedGain,
+                    measured:
+                        measuredGain
+                )
+        }
+
+        if let predictedThreshold =
+            result.predictedThresholdInputPowerWatts,
+           let measuredThreshold =
+            result.measuredThresholdInputPowerWatts,
+           measuredThreshold > 0.0 {
+
+            result.thresholdPredictionErrorPercent =
+                percentError(
+                    predicted:
+                        predictedThreshold,
+                    measured:
+                        measuredThreshold
+                )
+        }
+
+        // --------------------------------------------------------
+        // 13. Independent reproduction
+        // --------------------------------------------------------
+
+        result.experimentalRunCount =
+            experimentalRunCount
+
+        result.reproducibleRuns =
+            reproducibleRuns
+
+        result.independentReproductionSatisfied =
+            experimentalRunCount > 0 &&
+            reproducibleRuns == experimentalRunCount
+
+        // --------------------------------------------------------
+        // Physical output
+        //
+        // The simulator itself cannot claim that hardware emitted
+        // optical radiation.
+        // --------------------------------------------------------
+
+        result.physicalOutputDetected =
+            measuredOutputPowerWatts != nil &&
+            (measuredOutputPowerWatts ?? 0.0) > 0.0
+
+        // --------------------------------------------------------
+        // Prediction validation
+        //
+        // Requires an actual experimental wavelength and output
+        // measurement and agreement with prediction.
+        // --------------------------------------------------------
+
+        let wavelengthAgrees =
+            result.wavelengthPredictionErrorPercent
+                .map {
+                    $0 <= 5.0
+                }
+                ?? false
+
+        let powerAgrees =
+            result.powerPredictionErrorPercent
+                .map {
+                    $0 <= 10.0
+                }
+                ?? false
+
+        result.predictionValidated =
+            result.physicalOutputDetected &&
+            wavelengthAgrees &&
+            powerAgrees
+
+        // --------------------------------------------------------
+        // Energy accounting
+        // --------------------------------------------------------
+
+        if let inputEnergy =
+            measuredInputEnergyJoules,
+           let outputEnergy =
+            measuredOutputEnergyJoules {
+
+            let losses =
+                max(
+                    inputEnergy -
+                    outputEnergy,
+                    0.0
+                )
+
+            let residual =
+                inputEnergy -
+                outputEnergy -
+                losses
+
+            result.energyResidualJoules =
+                residual
+
+            result.energyAccountingClosed =
+                abs(residual) <=
+                max(
+                    inputEnergy * 0.01,
+                    1.0e-18
+                )
+        }
+
+        return result
+    }
+
+    // ------------------------------------------------------------
+    // Round-trip loss model
+    // ------------------------------------------------------------
+
+    private static func calculateRoundTripLoss(
+        state: QRTLState,
+        parameters: QRTLLaserParameters
+    ) -> Double {
+
+        let outputLoss =
+            parameters.outputTransmission
+
+        let modeledLossReduction =
+            QRTLLaserPhysics.clamp(
+                state.lossReduction,
+                0.0,
+                parameters.maximumLossReduction
+            )
+
+        return QRTLLaserPhysics.clamp(
+            outputLoss *
+            (1.0 - modeledLossReduction),
+            0.0,
+            1.0
+        )
+    }
+
+    // ------------------------------------------------------------
+    // Percentage error
+    // ------------------------------------------------------------
+
+    private static func percentError(
+        predicted: Double,
+        measured: Double
+    ) -> Double {
+
+        guard abs(predicted) > 1.0e-30 else {
+            return 0.0
+        }
+
+        return abs(
+            measured - predicted
+        )
+        /
+        abs(predicted)
+        *
+        100.0
+    }
+}
+
+struct LaserMeasurementState {
+
+    // ------------------------------------------------------------
+    // Stage 1 — QRTL convergence
+    // ------------------------------------------------------------
+
+    var qrtlPhaseError: Double = 0.0
+    var qrtlPhaseClosure: Double = 0.0
+    var qrtlResonanceResponse: Double = 0.0
+    var qrtlCoupling: Double = 0.0
+    var qrtlCoherence: Double = 0.0
+    var qrtlLocked: Bool = false
+
+    // ------------------------------------------------------------
+    // Stage 2 — Physical optical gain
+    //
+    // These are deliberately separate from combinedGain.
+    //
+    // combinedGain is the existing QRTL model metric.
+    // opticalGain is an optical-power measurement/prediction.
+    // ------------------------------------------------------------
+
+    var inputOpticalPowerWatts: Double?
+    var outputOpticalPowerWatts: Double?
+
+    var predictedOpticalGain: Double?
+    var measuredOpticalGain: Double?
+
+    var gainCoefficientPerMeter: Double?
+
+    // ------------------------------------------------------------
+    // Stage 3 — Laser threshold
+    // ------------------------------------------------------------
+
+    var predictedThresholdInputPowerWatts: Double?
+    var measuredThresholdInputPowerWatts: Double?
+    var thresholdReached: Bool = false
+
+    // ------------------------------------------------------------
+    // Stage 4 — Input → output power
+    // ------------------------------------------------------------
+
+    var absorbedPumpPowerWatts: Double?
+    var intracavityPowerWatts: Double?
+    var lossPowerWatts: Double?
+
+    // ------------------------------------------------------------
+    // Stage 5 — Optical efficiency
+    // ------------------------------------------------------------
+
+    var inputEnergyJoules: Double?
+    var outputEnergyJoules: Double?
+
+    var predictedEfficiency: Double?
+    var measuredEfficiency: Double?
+
+    // ------------------------------------------------------------
+    // Stage 6 — Calcium-40 characterization
+    //
+    // The target wavelength is a configured model prediction.
+    // It is NOT automatically treated as an experimentally
+    // established Ca-40 transition.
+    // ------------------------------------------------------------
+
+    var calcium40TransitionEnergyJoules: Double?
+    var calcium40TransitionFrequencyHz: Double?
+    var calcium40TransitionWavelengthMeters: Double?
+
+    var calcium40LifetimeSeconds: Double?
+    var calcium40LinewidthHz: Double?
+
+    // ------------------------------------------------------------
+    // Stage 7 — Population / excitation dynamics
+    // ------------------------------------------------------------
+
+    var totalPopulation: Double?
+    var lowerStatePopulation: Double?
+    var upperStatePopulation: Double?
+    var excitationFraction: Double?
+    var populationInversion: Double?
+
+    // ------------------------------------------------------------
+    // Stage 8 — Cavity gain / loss
+    // ------------------------------------------------------------
+
+    var roundTripGain: Double?
+    var mirrorLoss: Double?
+    var absorptionLoss: Double?
+    var scatteringLoss: Double?
+    var outputCouplingLoss: Double?
+    var roundTripLoss: Double?
+
+    var netRoundTripGain: Double?
+
+    // ------------------------------------------------------------
+    // Stage 9 — QRTL energy transfer
+    // ------------------------------------------------------------
+
+    var energyBeforeQRTLInteractionJoules: Double?
+    var energyAfterQRTLInteractionJoules: Double?
+    var qrtlEnergyTransferredJoules: Double?
+    var qrtlInteractionRatePerSecond: Double?
+
+    // ------------------------------------------------------------
+    // Stage 10 — Output spectrum
+    // ------------------------------------------------------------
+
+    var predictedWavelengthMeters: Double?
+    var measuredWavelengthMeters: Double?
+
+    var predictedLinewidthHz: Double?
+    var measuredLinewidthHz: Double?
+
+    var spectralPowerWatts: Double?
+
+    // ------------------------------------------------------------
+    // Stage 11 — Temporal output
+    // ------------------------------------------------------------
+
+    var predictedStartupTimeSeconds: Double?
+    var measuredStartupTimeSeconds: Double?
+
+    var measuredPulseDurationSeconds: Double?
+    var measuredRepetitionRateHz: Double?
+
+    var outputStability: Double?
+
+    // ------------------------------------------------------------
+    // Stage 12 — Prediction vs experiment
+    // ------------------------------------------------------------
+
+    var wavelengthPredictionErrorPercent: Double?
+    var powerPredictionErrorPercent: Double?
+    var thresholdPredictionErrorPercent: Double?
+
+    // ------------------------------------------------------------
+    // Stage 13 — Independent reproduction
+    // ------------------------------------------------------------
+
+    var experimentalRunCount: Int = 0
+    var reproducibleRuns: Int = 0
+
+    // ------------------------------------------------------------
+    // Final verification states
+    // ------------------------------------------------------------
+
+    var physicalOutputDetected: Bool = false
+    var predictionValidated: Bool = false
+    var independentReproductionSatisfied: Bool = false
+
+    // ------------------------------------------------------------
+    // Energy accounting
+    // ------------------------------------------------------------
+
+    var energyResidualJoules: Double?
+    var energyAccountingClosed: Bool = false
+}
 
 struct QRTLLaserParameters {
 
@@ -797,6 +1452,20 @@ enum QRTLLaserPhysics {
 @MainActor
 final class MasterMonitor: ObservableObject {
 
+    @Published private(set) var measurementState =
+        LaserMeasurementState()
+    @Published var measuredInputPowerWatts: Double?
+    @Published var measuredOutputPowerWatts: Double?
+    @Published var measuredWavelengthMeters: Double?
+    @Published var measuredThresholdInputPowerWatts: Double?
+    @Published var measuredLinewidthHz: Double?
+    @Published var measuredStartupTimeSeconds: Double?
+    @Published var measuredInputEnergyJoules: Double?
+    @Published var measuredOutputEnergyJoules: Double?
+
+    @Published var experimentalRunCount: Int = 0
+    @Published var reproducibleRuns: Int = 0
+    
     @Published private(set) var qrtlState: QRTLState
     @Published private(set) var photonNodes: [PhotonState]
 
@@ -1005,6 +1674,37 @@ final class MasterMonitor: ObservableObject {
         stop()
         resetState()
     }
+    
+    // MARK: Update Measurement Pipeline
+
+    func updateMeasurements() {
+
+        measurementState =
+            QRTLLaserMeasurementEngine.evaluate(
+                state: qrtlState,
+                parameters: parameters,
+                inputPowerWatts:
+                    measuredInputPowerWatts,
+                measuredOutputPowerWatts:
+                    measuredOutputPowerWatts,
+                measuredWavelengthMeters:
+                    measuredWavelengthMeters,
+                measuredThresholdInputPowerWatts:
+                    measuredThresholdInputPowerWatts,
+                measuredLinewidthHz:
+                    measuredLinewidthHz,
+                measuredStartupTimeSeconds:
+                    measuredStartupTimeSeconds,
+                measuredInputEnergyJoules:
+                    measuredInputEnergyJoules,
+                measuredOutputEnergyJoules:
+                    measuredOutputEnergyJoules,
+                experimentalRunCount:
+                    experimentalRunCount,
+                reproducibleRuns:
+                    reproducibleRuns
+            )
+    }
 
     // MARK: Reset State
 
@@ -1082,6 +1782,7 @@ final class MasterMonitor: ObservableObject {
         qrtlState =
             makeStateLocked()
 
+        updateMeasurements()
         updatePhotonPositionsLocked()
     }
 
@@ -1149,6 +1850,8 @@ final class MasterMonitor: ObservableObject {
         )
 
         updatePhotonPositionsLocked()
+
+        updateMeasurements()
 
         updatePublishedStateLocked()
     }
