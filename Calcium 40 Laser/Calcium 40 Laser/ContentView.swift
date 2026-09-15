@@ -2583,28 +2583,29 @@ struct ContentView: View {
     @StateObject private var monitor =
         MasterMonitor()
 
+    @State private var showAbout = false
     private let parameters =
         QRTLLaserParameters()
 
     var body: some View {
-
+        NavigationStack{
         ZStack {
-
+            
             Color.black
                 .ignoresSafeArea()
-
+            
             VStack(
                 spacing: 12
             ) {
-
+                
                 // ------------------------------------------------
                 // Header
                 // ------------------------------------------------
-
+                
                 VStack(
                     spacing: 4
                 ) {
-
+                    
                     Text(
                         "QRTL Resonating Amplifier"
                     )
@@ -2617,7 +2618,7 @@ struct ContentView: View {
                     .foregroundStyle(
                         .white
                     )
-
+                    
                     Text(
                         "2.94 µm cavity resonance simulation"
                     )
@@ -2628,11 +2629,11 @@ struct ContentView: View {
                         .gray
                     )
                 }
-
+                
                 // ------------------------------------------------
                 // Scene
                 // ------------------------------------------------
-
+                
                 QRTLLaserSceneView(
                     monitor:
                         monitor
@@ -2647,48 +2648,48 @@ struct ContentView: View {
                             16
                     )
                 )
-
+                
                 // ------------------------------------------------
                 // State
                 // ------------------------------------------------
-
+                
                 ScrollView {
-
+                    
                     VStack(
                         alignment:
-                            .leading,
+                                .leading,
                         spacing:
                             8
                     ) {
-
+                        
                         Text(
                             "CAVITY TRAVERSAL"
                         )
                         .font(
                             .caption
-                            .weight(.bold)
+                                .weight(.bold)
                         )
                         .foregroundStyle(
                             .gray
                         )
-
+                        
                         metricRow(
                             "Direction",
                             monitor.qrtlState
                                 .currentDirection
                                 .rawValue
                         )
-
+                        
                         metricRow(
                             "Round trips",
                             "\(monitor.qrtlState.roundTripCount)"
                         )
-
+                        
                         metricRow(
                             "Gain crossings",
                             "\(monitor.qrtlState.gainMediumCrossings)"
                         )
-
+                        
                         metricRow(
                             "Physical round-trip time",
                             formatTime(
@@ -2696,7 +2697,7 @@ struct ContentView: View {
                                     .physicalRoundTripTime
                             )
                         )
-
+                        
                         metricRow(
                             "Modeled physical elapsed",
                             formatTime(
@@ -2704,20 +2705,20 @@ struct ContentView: View {
                                     .physicalElapsedTime
                             )
                         )
-
+                        
                         Divider()
-
+                        
                         Text(
                             "QRTL STATE"
                         )
                         .font(
                             .caption
-                            .weight(.bold)
+                                .weight(.bold)
                         )
                         .foregroundStyle(
                             .gray
                         )
-
+                        
                         metricRow(
                             "Phase error",
                             formatRadians(
@@ -2725,7 +2726,7 @@ struct ContentView: View {
                                     .phaseError
                             )
                         )
-
+                        
                         metricRow(
                             "Phase closure",
                             format(
@@ -2733,7 +2734,7 @@ struct ContentView: View {
                                     .phaseClosure
                             )
                         )
-
+                        
                         metricRow(
                             "Twist current",
                             format(
@@ -2741,7 +2742,7 @@ struct ContentView: View {
                                     .twistCurrent
                             )
                         )
-
+                        
                         metricRow(
                             "Resonance response",
                             format(
@@ -2749,7 +2750,7 @@ struct ContentView: View {
                                     .resonanceResponse
                             )
                         )
-
+                        
                         metricRow(
                             "Shell energy",
                             format(
@@ -2757,7 +2758,7 @@ struct ContentView: View {
                                     .shellEnergy
                             )
                         )
-
+                        
                         metricRow(
                             "QRTL coupling",
                             format(
@@ -2765,7 +2766,7 @@ struct ContentView: View {
                                     .coupling
                             )
                         )
-
+                        
                         metricRow(
                             "Coherence",
                             format(
@@ -2773,20 +2774,20 @@ struct ContentView: View {
                                     .coherence
                             )
                         )
-
+                        
                         Divider()
-
+                        
                         Text(
                             "AMPLIFICATION / MODE"
                         )
                         .font(
                             .caption
-                            .weight(.bold)
+                                .weight(.bold)
                         )
                         .foregroundStyle(
                             .gray
                         )
-
+                        
                         metricRow(
                             "Coherence gain",
                             format(
@@ -2794,7 +2795,7 @@ struct ContentView: View {
                                     .coherenceGain
                             )
                         )
-
+                        
                         metricRow(
                             "Loss gain",
                             format(
@@ -2802,7 +2803,7 @@ struct ContentView: View {
                                     .lossGain
                             )
                         )
-
+                        
                         metricRow(
                             "Concentration gain",
                             format(
@@ -2810,7 +2811,7 @@ struct ContentView: View {
                                     .concentrationGain
                             )
                         )
-
+                        
                         metricRow(
                             "Combined gain",
                             format(
@@ -2818,20 +2819,20 @@ struct ContentView: View {
                                     .combinedGain
                             )
                         )
-
+                        
                         Divider()
-
+                        
                         Text(
                             "RESONANCE LOCK"
                         )
                         .font(
                             .caption
-                            .weight(.bold)
+                                .weight(.bold)
                         )
                         .foregroundStyle(
                             .gray
                         )
-
+                        
                         metricRow(
                             "Stable lock rounds",
                             "\(monitor.qrtlState.stableLockRounds)"
@@ -2840,7 +2841,7 @@ struct ContentView: View {
                             +
                             "\(parameters.requiredStableLockRounds)"
                         )
-
+                        
                         metricRow(
                             "Lock status",
                             monitor.qrtlState
@@ -2848,20 +2849,20 @@ struct ContentView: View {
                             ? "LOCKED"
                             : "ALIGNING"
                         )
-
+                        
                         Divider()
-
+                        
                         Text(
                             "OUTPUT COUPLER"
                         )
                         .font(
                             .caption
-                            .weight(.bold)
+                                .weight(.bold)
                         )
                         .foregroundStyle(
                             .gray
                         )
-
+                        
                         metricRow(
                             "Transmission",
                             format(
@@ -2869,7 +2870,7 @@ struct ContentView: View {
                                     .outputTransmission
                             )
                         )
-
+                        
                         metricRow(
                             "Reflection",
                             format(
@@ -2877,7 +2878,7 @@ struct ContentView: View {
                                     .outputReflection
                             )
                         )
-
+                        
                         metricRow(
                             "Circulating field",
                             format(
@@ -2885,7 +2886,7 @@ struct ContentView: View {
                                     .circulatingFieldFactor
                             )
                         )
-
+                        
                         metricRow(
                             "Transmitted output",
                             format(
@@ -2893,12 +2894,12 @@ struct ContentView: View {
                                     .transmittedOutputFactor
                             )
                         )
-
+                        
                         metricRow(
                             "Output events",
                             "\(monitor.qrtlState.outputEvents)"
                         )
-
+                        
                         metricRow(
                             "Output",
                             monitor.qrtlState
@@ -2906,25 +2907,25 @@ struct ContentView: View {
                             ? "TRANSMITTING"
                             : "OFF"
                         )
-
+                        
                         Divider()
-
+                        
                         Text(
                             "STANDARD LASER VALUES"
                         )
                         .font(
                             .caption
-                            .weight(.bold)
+                                .weight(.bold)
                         )
                         .foregroundStyle(
                             .gray
                         )
-
+                        
                         metricRow(
                             "Wavelength",
                             "2.94 µm"
                         )
-
+                        
                         metricRow(
                             "Frequency",
                             formatFrequency(
@@ -2932,7 +2933,7 @@ struct ContentView: View {
                                     .targetFrequency
                             )
                         )
-
+                        
                         metricRow(
                             "Photon energy",
                             String(
@@ -2944,7 +2945,7 @@ struct ContentView: View {
                             +
                             " J"
                         )
-
+                        
                         Text(
                             "The 8-second limit is a safety timeout only. "
                             +
@@ -2967,21 +2968,21 @@ struct ContentView: View {
                     maxHeight:
                         330
                 )
-
+                
                 // ------------------------------------------------
                 // Controls
                 // ------------------------------------------------
-
+                
                 HStack(
                     spacing: 12
                 ) {
-
+                    
                     Button {
-
+                        
                         monitor.start()
-
+                        
                     } label: {
-
+                        
                         Label(
                             "Ignite Cavity",
                             systemImage:
@@ -2989,19 +2990,19 @@ struct ContentView: View {
                         )
                         .frame(
                             maxWidth:
-                                .infinity
+                                    .infinity
                         )
                     }
                     .buttonStyle(
                         .borderedProminent
                     )
-
+                    
                     Button {
-
+                        
                         monitor.reset()
-
+                        
                     } label: {
-
+                        
                         Label(
                             "Reset",
                             systemImage:
@@ -3009,7 +3010,7 @@ struct ContentView: View {
                         )
                         .frame(
                             maxWidth:
-                                .infinity
+                                    .infinity
                         )
                     }
                     .buttonStyle(
@@ -3019,8 +3020,30 @@ struct ContentView: View {
                 .padding(
                     .horizontal
                 )
+            }}
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showAbout = true
+                } label: {
+                    Image(systemName: "info.circle")
+                }
+                .accessibilityLabel("Information")
             }
+                    }
             .padding()
+            .sheet(
+                isPresented: $showAbout
+            ) {
+
+                NavigationStack {
+
+                    AboutView()
+                }
+                .preferredColorScheme(
+                    .dark
+                )
+            }
         }
     }
 
