@@ -1,201 +1,36 @@
-//
-//  QRTLLaserSimulatorView.swift
-//  QRTL Resonating Amplifier — 3D photon-alignment laser simulator
-//
-//  Implements the three-stage QRTL laser prediction:
-//    1. Coherence efficiency gain   = newCoherence / oldCoherence
-//    2. Loss-reduction gain         = 1 + fractionReduced
-//    3. Beam-concentration gain     = 1 / areaReductionFactor
-//    combinedGain = coherenceGain * lossGain * concentrationGain
-//
-//  Default ramp targets (0.70→0.95 coherence, 25% loss reduction,
-//  50% area reduction) reproduce the document's ≈3.4× combined gain.
-//
-//  Target output: 2.94 µm (mid-infrared, invisible to the human eye —
-//  photons are rendered in a false-color deep red/orange so the beam
-//  is visible in the SceneKit view; this is a visualization choice,
-//  not a physical claim about the beam's actual color).
-//
-//  Drop this file directly into your project. No external assets needed.
-//
+/*
+ To make the simulated laser produce light at two point nine four micrometers, begin by setting two point nine four micrometers as the target wavelength. This wavelength corresponds to a frequency of about one hundred one point nine seven terahertz. Each photon at this wavelength carries a small amount of energy, about zero point four two two electron volts. The wavelength defines the energy required for each output photon, but it does not by itself determine the electrical input current.
 
-//
-//  ContentView.swift
-//  QRTL Resonating Amplifier
-//
-//  Proposed QRTL laser / photon-alignment simulator.
-//
-//  IMPORTANT:
-//  QRTL is a proposed, unvalidated theory. The QRTL equations below are
-//  implemented as a model-defined phenomenological system. They should not
-//  be represented as experimentally established physics.
-//
-//  Pipeline:
-//
-//  QRTL phase state
-//      ↓
-//  phase closure
-//      ↓
-//  twist-current
-//      ↓
-//  resonance response
-//      ↓
-//  resonance-shell energy
-//      ↓
-//  QRTL electromagnetic coupling
-//      ↓
-//  photon phase coherence
-//      ↓
-//  modeled cavity loss
-//      ↓
-//  modeled beam-area concentration
-//      ↓
-//  laser gain
-//      ↓
-//  2.94 µm output
-//
-//  Standard physics:
-//      f = c / λ
-//      E_photon = h f
-//
-//  QRTL model quantities:
-//      phase closure
-//      twist current
-//      resonance response
-//      shell energy
-//      QRTL coupling
-//      coherence
-//      loss factor
-//      beam-area factor
-//
+ Choose the desired optical output power, such as ten milliwatts. A higher output power requires more photons every second, and more photons require more input energy. Also choose a threshold current. The threshold current is the minimum electrical current needed before the simulated medium can support coherent laser action. Below threshold, the model may show excitation and random spontaneous emission, but it should not show a stable coherent laser beam. Above threshold, the current beyond the threshold becomes available to support stimulated photon generation.
 
-//
-//  QRTLLaserSimulatorView.swift
-//  QRTL Resonating Amplifier — 3D photon-alignment laser simulator
-//
-//  Implements the three-stage QRTL laser prediction:
-//    1. Coherence efficiency gain   = newCoherence / oldCoherence
-//    2. Loss-reduction gain         = 1 + fractionReduced
-//    3. Beam-concentration gain     = 1 / areaReductionFactor
-//    combinedGain = coherenceGain * lossGain * concentrationGain
-//
-//  Default ramp targets (0.70→0.95 coherence, 25% loss reduction,
-//  50% area reduction) reproduce the document's ≈3.4× combined gain.
-//
-//  Target output: 2.94 µm (mid-infrared, invisible to the human eye —
-//  photons are rendered in a false-color deep red/orange so the beam
-//  is visible in the SceneKit view; this is a visualization choice,
-//  not a physical claim about the beam's actual color).
-//
-//  Drop this file directly into your project. No external assets needed.
-//
+ Calculate the excess current by subtracting the threshold current from the drive current. For example, if the simulated drive current is two hundred milliamps and the threshold current is one hundred milliamps, the excess current is one hundred milliamps. Current represents moving electric charge. Dividing the excess current by the charge of one electron gives the number of injected electrons per second. An excess current of one hundred milliamps corresponds to about six hundred twenty four quadrillion injected electrons each second.
 
-//
-//  ContentView.swift
-//  QRTL Resonating Amplifier
-//
-//  Proposed QRTL laser / photon-alignment simulator.
-//
-//  IMPORTANT:
-//  QRTL is a proposed, unvalidated theory. The QRTL equations below are
-//  implemented as a model-defined phenomenological system. They should not
-//  be represented as experimentally established physics.
-//
-//  Pipeline:
-//
-//  QRTL phase state
-//      ↓
-//  phase closure
-//      ↓
-//  twist-current
-//      ↓
-//  resonance response
-//      ↓
-//  resonance-shell energy
-//      ↓
-//  QRTL electromagnetic coupling
-//      ↓
-//  photon phase coherence
-//      ↓
-//  modeled cavity loss
-//      ↓
-//  modeled beam-area concentration
-//      ↓
-//  laser gain
-//      ↓
-//  2.94 µm output
-//
-//  Standard physics:
-//      f = c / λ
-//      E_photon = h f
-//
-//  QRTL model quantities:
-//      phase closure
-//      twist current
-//      resonance response
-//      shell energy
-//      QRTL coupling
-//      coherence
-//      loss factor
-//      beam-area factor
-//
+ Apply a modeled injection efficiency because not every injected electron creates a useful excitation. For example, a seventy percent injection efficiency means that only seventy percent of the injected electrons are treated as useful excitations in the simulation. These useful excitations provide pump energy to the calcium field.
 
-//
-// QRTLLaserSimulatorView.swift
-// QRTL Resonating Amplifier — 3D photon-alignment laser simulator
-//
-// IMPORTANT:
-// QRTL is a proposed, unvalidated theory.
-//
-// The QRTL relationships in this file are model-defined,
-// phenomenological simulation equations. They are NOT established
-// experimental laws of physics.
-//
-// Standard relationships:
-//      f = c / λ
-//      E = h f
-//
-// Proposed simulation pipeline:
-//
-//      cavity traversal
-//          ↓
-//      gain-medium crossing
-//          ↓
-//      phase closure
-//          ↓
-//      twist current
-//          ↓
-//      resonance response
-//          ↓
-//      shell energy
-//          ↓
-//      QRTL coupling
-//          ↓
-//      coherence
-//          ↓
-//      loss reduction
-//          ↓
-//      beam concentration
-//          ↓
-//      stable lock
-//          ↓
-//      output coupler
-//          ↓
-//      10% transmitted output
-//
-// Visualization of the 2.94 µm output uses visible false-color
-// rendering. This is a visualization choice and is not a claim
-// that 2.94 µm radiation is visible to the human eye.
-//
+ The calcium field is the simulated active medium. Spread the current-derived pump energy across the calcium lattice. Cells near the center of the pump region receive the most energy, while cells farther away receive less. A smooth Gaussian distribution is appropriate because it produces a concentrated but gradual pump region rather than a sharp artificial edge.
+
+ As the calcium and QRTL lattice evolves, update the phase, twist, displacement, strain, local energy, excitation, and damping of each cell. Allow energy to move between neighboring cells. This produces a collective field rather than a single global value. When cell phases become more aligned, the lattice coherence increases. When phases remain random, coherence remains low.
+
+ Use the lattice coherence and energy localization to calculate a QRTL to electromagnetic coupling proxy. This value should remain clearly labeled as a simulation proxy. It is a model value that controls how effectively the organized calcium and QRTL field contributes to the simulated electromagnetic cavity mode. It is not a measured electromagnetic coupling constant.
+
+ Use the coherence and electromagnetic coupling proxy to calculate a calcium excitation and population inversion proxy. Population inversion means the modeled upper energy state has more population than the lower energy state. In the simulation, population inversion is the condition that allows stimulated emission to add coherent photons to the cavity mode.
+
+ The photon generation rate should rise when the excess current is higher, injection efficiency is higher, lattice coherence is stronger, electromagnetic coupling is stronger, and population inversion is positive. The current creates the pump energy, the pump energy creates the calcium field excitation, the excitation helps create inversion, and the inversion generates simulated photons in the cavity.
+
+ Record a time-domain signal from the lattice while it evolves. Run a fast Fourier transform on that signal to identify the strongest simulated frequency. Convert the strongest frequency into a wavelength and compare it with the two point nine four micrometer target. The simulation should not simply assign the target wavelength to the output. Instead, it should use two point nine four micrometers as the target and report how close the simulated dominant mode is to that target.
+
+ Once the lattice mode is close enough to the target and the modeled population inversion is positive, apply cavity gain and loss. Stimulated emission adds photons to the cavity. Mirror loss, absorption loss, scattering loss, and output-coupler transmission remove photons from the cavity. The model reaches laser threshold only when generated gain is greater than total cavity loss.
+
+ Finally, allow the output coupler to extract a fraction of the cavity photons. For example, a ten percent output coupler transmits ten percent of the circulating photon population as output light and reflects the remaining ninety percent back into the cavity. The cavity must continuously receive new stimulated photons from the excited calcium field. If the model only removes photons at the output coupler and does not replenish them through gain, the simulated beam will fade instead of reaching a stable output.
+ */
 
 import Foundation
 import SwiftUI
 import SceneKit
 import Combine
+import Accelerate   // for FFT
 
-// MARK: - QRTL Parameters
-
-// MARK: - Laser Measurement / Verification
+// MARK: - Measurement Status
 
 enum MeasurementStatus: String {
     case notMeasured = "NOT MEASURED"
@@ -204,7 +39,36 @@ enum MeasurementStatus: String {
     case agreement = "AGREEMENT"
     case disagreement = "DISAGREEMENT"
 }
-// MARK: - Laser Measurement Engine
+
+// MARK: - Calcium Lattice Cell (active medium)
+
+struct CalciumCell {
+    var phase: Double           // rad
+    var twist: Double
+    var displacement: Double
+    var strain: Double
+    var localEnergy: Double
+    var excitation: Double      // 0…1
+    var damping: Double
+    var upperPopulation: Double // proxy
+    var lowerPopulation: Double // proxy
+
+    static func randomInitial() -> CalciumCell {
+        CalciumCell(
+            phase: Double.random(in: 0..<2 * .pi),
+            twist: Double.random(in: -0.1...0.1),
+            displacement: 0,
+            strain: 0,
+            localEnergy: 0.05,
+            excitation: 0.0,
+            damping: 0.02,
+            upperPopulation: 0.1,
+            lowerPopulation: 0.9
+        )
+    }
+}
+
+// MARK: - Laser Measurement Engine (extended)
 
 struct QRTLLaserMeasurementEngine {
 
@@ -225,10 +89,7 @@ struct QRTLLaserMeasurementEngine {
 
         var result = LaserMeasurementState()
 
-        // --------------------------------------------------------
         // 1. QRTL convergence
-        // --------------------------------------------------------
-
         result.qrtlPhaseError = state.phaseError
         result.qrtlPhaseClosure = state.phaseClosure
         result.qrtlResonanceResponse = state.resonanceResponse
@@ -236,765 +97,381 @@ struct QRTLLaserMeasurementEngine {
         result.qrtlCoherence = state.coherence
         result.qrtlLocked = state.resonanceLocked
 
-        // --------------------------------------------------------
-        // 2. Physical optical gain
-        //
-        // IMPORTANT:
-        //
-        // Existing combinedGain is retained as the QRTL model
-        // metric. It is NOT silently relabeled as measured optical
-        // gain.
-        // --------------------------------------------------------
-
-        if let inputPowerWatts,
-           inputPowerWatts > 0.0 {
-
-            if let measuredOutputPowerWatts,
-               measuredOutputPowerWatts >= 0.0 {
-
-                result.measuredOpticalGain =
-                    measuredOutputPowerWatts /
-                    inputPowerWatts
+        // 2. Optical gain (model vs measured)
+        if let inputPowerWatts, inputPowerWatts > 0 {
+            if let measuredOutputPowerWatts, measuredOutputPowerWatts >= 0 {
+                result.measuredOpticalGain = measuredOutputPowerWatts / inputPowerWatts
             }
-
-            // Model-defined optical prediction.
-            //
-            // This is explicitly a prediction derived from the
-            // existing QRTL gain metric.
-            result.predictedOpticalGain =
-                state.combinedGain
-
-            let gainLength =
-                max(
-                    parameters.gainEndZ -
-                    parameters.gainStartZ,
-                    1.0e-12
-                )
-
-            result.gainCoefficientPerMeter =
-                log(
-                    max(
-                        state.combinedGain,
-                        1.0e-12
-                    )
-                )
-                /
-                gainLength
+            result.predictedOpticalGain = state.combinedGain
+            let gainLength = max(parameters.gainEndZ - parameters.gainStartZ, 1e-12)
+            result.gainCoefficientPerMeter = log(max(state.combinedGain, 1e-12)) / gainLength
         }
 
-        // --------------------------------------------------------
-        // 3. Laser threshold
-        //
-        // Threshold is deliberately different from QRTL lock.
-        // --------------------------------------------------------
-
-        if let predictedGain =
-            result.predictedOpticalGain {
-
-            let totalLoss =
-                calculateRoundTripLoss(
-                    state: state,
-                    parameters: parameters
-                )
-
-            if totalLoss > 0.0 {
-
-                // Model-defined threshold estimate.
-                //
-                // This is not an experimentally established
-                // threshold power.
-                result.predictedThresholdInputPowerWatts =
-                    inputPowerWatts.map {
-                        $0 * totalLoss /
-                        max(predictedGain, 1.0e-12)
-                    }
+        // 3. Threshold
+        if let predictedGain = result.predictedOpticalGain {
+            let totalLoss = calculateRoundTripLoss(state: state, parameters: parameters)
+            if totalLoss > 0 {
+                result.predictedThresholdInputPowerWatts = inputPowerWatts.map {
+                    $0 * totalLoss / max(predictedGain, 1e-12)
+                }
             }
-
-            result.thresholdReached =
-                predictedGain > max(
-                    totalLoss,
-                    1.0e-12
-                )
+            result.thresholdReached = predictedGain > max(totalLoss, 1e-12)
         }
-
-        if let measuredThreshold =
-            measuredThresholdInputPowerWatts {
-
-            result.measuredThresholdInputPowerWatts =
-                measuredThreshold
-
+        if let measuredThreshold = measuredThresholdInputPowerWatts {
+            result.measuredThresholdInputPowerWatts = measuredThreshold
             if let inputPowerWatts {
-                result.thresholdReached =
-                    inputPowerWatts >= measuredThreshold
+                result.thresholdReached = inputPowerWatts >= measuredThreshold
             }
         }
 
-        // --------------------------------------------------------
-        // 4. Input → output power
-        // --------------------------------------------------------
-
-        result.inputOpticalPowerWatts =
-            inputPowerWatts
-
-        result.outputOpticalPowerWatts =
-            measuredOutputPowerWatts
-
-        // The circulating field is a normalized model quantity.
-        //
-        // Do not turn it into watts without an independently
-        // specified/calibrated input power.
+        // 4–5. Power & efficiency
+        result.inputOpticalPowerWatts = inputPowerWatts
+        result.outputOpticalPowerWatts = measuredOutputPowerWatts
         if let inputPowerWatts {
-
-            result.intracavityPowerWatts =
-                inputPowerWatts *
-                max(
-                    state.circulatingFieldFactor,
-                    0.0
-                )
-
-            result.absorbedPumpPowerWatts =
-                inputPowerWatts
-
-            if let output =
-                measuredOutputPowerWatts {
-
-                result.lossPowerWatts =
-                    max(
-                        inputPowerWatts - output,
-                        0.0
-                    )
+            result.intracavityPowerWatts = inputPowerWatts * max(state.circulatingFieldFactor, 0)
+            result.absorbedPumpPowerWatts = inputPowerWatts
+            if let output = measuredOutputPowerWatts {
+                result.lossPowerWatts = max(inputPowerWatts - output, 0)
             }
         }
-
-        // --------------------------------------------------------
-        // 5. Optical efficiency
-        // --------------------------------------------------------
-
-        if let inputEnergy =
-            measuredInputEnergyJoules,
-           inputEnergy > 0.0,
-           let outputEnergy =
-            measuredOutputEnergyJoules {
-
-            result.inputEnergyJoules =
-                inputEnergy
-
-            result.outputEnergyJoules =
-                outputEnergy
-
-            result.measuredEfficiency =
-                outputEnergy /
-                inputEnergy
+        if let inputEnergy = measuredInputEnergyJoules, inputEnergy > 0,
+           let outputEnergy = measuredOutputEnergyJoules {
+            result.inputEnergyJoules = inputEnergy
+            result.outputEnergyJoules = outputEnergy
+            result.measuredEfficiency = outputEnergy / inputEnergy
+        }
+        if let inputPowerWatts, inputPowerWatts > 0 {
+            result.predictedEfficiency = min(1, max(0,
+                state.combinedGain * parameters.outputTransmission /
+                max(state.combinedGain, 1e-12)))
         }
 
-        if let inputPowerWatts,
-           inputPowerWatts > 0.0 {
-
-            // Model prediction uses the actual configured
-            // output-coupler transmission and QRTL state.
-            result.predictedEfficiency =
-                min(
-                    1.0,
-                    max(
-                        0.0,
-                        state.combinedGain *
-                        parameters.outputTransmission /
-                        max(
-                            state.combinedGain,
-                            1.0e-12
-                        )
-                    )
-                )
-        }
-
-        // --------------------------------------------------------
-        // 6. Calcium-40 transition characterization
-        //
-        // The app records the target as a model/reference value.
-        // No experimental Ca-40 transition is invented here.
-        // --------------------------------------------------------
-
-        result.calcium40TransitionWavelengthMeters =
-            parameters.targetWavelengthMeters
-
-        result.calcium40TransitionFrequencyHz =
-            parameters.targetFrequency
-
-        result.calcium40TransitionEnergyJoules =
-            parameters.photonEnergy
-
-        // Lifetime and linewidth remain nil until supplied by
-        // authoritative reference data or experiment.
+        // 6. Calcium-40 target (model reference only)
+        result.calcium40TransitionWavelengthMeters = parameters.targetWavelengthMeters
+        result.calcium40TransitionFrequencyHz = parameters.targetFrequency
+        result.calcium40TransitionEnergyJoules = parameters.photonEnergy
         result.calcium40LifetimeSeconds = nil
         result.calcium40LinewidthHz = nil
 
-        // --------------------------------------------------------
-        // 7. Population / excitation
-        //
-        // No arbitrary Ca-40 population is created.
-        // These remain measurement inputs until an excitation
-        // model or experimental population measurement exists.
-        // --------------------------------------------------------
+        // 7. Population (now filled from lattice proxies)
+        result.totalPopulation = state.latticeTotalPopulation
+        result.lowerStatePopulation = state.latticeLowerPopulation
+        result.upperStatePopulation = state.latticeUpperPopulation
+        result.excitationFraction = state.latticeExcitationFraction
+        result.populationInversion = state.populationInversionProxy
 
-        result.totalPopulation = nil
-        result.lowerStatePopulation = nil
-        result.upperStatePopulation = nil
-        result.excitationFraction = nil
-        result.populationInversion = nil
+        // 8. Cavity gain/loss
+        result.roundTripGain = state.combinedGain
+        result.mirrorLoss = 1.0 - parameters.outputReflection
+        result.absorptionLoss = parameters.absorptionLoss
+        result.scatteringLoss = parameters.scatteringLoss
+        result.outputCouplingLoss = parameters.outputTransmission
+        result.roundTripLoss = calculateRoundTripLoss(state: state, parameters: parameters)
+        result.netRoundTripGain = (result.roundTripGain ?? 0) - (result.roundTripLoss ?? 0)
 
-        // --------------------------------------------------------
-        // 8. Cavity round-trip gain/loss
-        // --------------------------------------------------------
-
-        result.roundTripGain =
-            state.combinedGain
-
-        result.mirrorLoss =
-            1.0 -
-            parameters.outputReflection
-
-        result.absorptionLoss = nil
-        result.scatteringLoss = nil
-
-        result.outputCouplingLoss =
-            parameters.outputTransmission
-
-        result.roundTripLoss =
-            calculateRoundTripLoss(
-                state: state,
-                parameters: parameters
-            )
-
-        result.netRoundTripGain =
-            (result.roundTripGain ?? 0.0)
-            -
-            (result.roundTripLoss ?? 0.0)
-
-        // --------------------------------------------------------
-        // 9. QRTL energy transfer
-        //
-        // We can report the change in the model's shell-energy
-        // quantity, but this is NOT automatically joules.
-        // --------------------------------------------------------
-
+        // 9. QRTL energy (still model quantities)
         result.energyBeforeQRTLInteractionJoules = nil
         result.energyAfterQRTLInteractionJoules = nil
         result.qrtlEnergyTransferredJoules = nil
         result.qrtlInteractionRatePerSecond = nil
 
-        // --------------------------------------------------------
-        // 10. Output spectrum
-        // --------------------------------------------------------
-
-        result.predictedWavelengthMeters =
-            parameters.targetWavelengthMeters
-
-        result.measuredWavelengthMeters =
-            measuredWavelengthMeters
-
+        // 10. Spectrum – predicted is target; measured can be experimental
+        result.predictedWavelengthMeters = parameters.targetWavelengthMeters
+        result.measuredWavelengthMeters = measuredWavelengthMeters
         result.predictedLinewidthHz = nil
-        result.measuredLinewidthHz =
-            measuredLinewidthHz
+        result.measuredLinewidthHz = measuredLinewidthHz
+        result.spectralPowerWatts = measuredOutputPowerWatts
 
-        result.spectralPowerWatts =
-            measuredOutputPowerWatts
+        // Simulated dominant wavelength from FFT (authoritative for “how close”)
+        result.simulatedDominantWavelengthMeters = state.simulatedDominantWavelengthMeters
+        result.simulatedDominantFrequencyHz = state.simulatedDominantFrequencyHz
+        result.wavelengthClosenessPercent = state.wavelengthClosenessPercent
 
-        // --------------------------------------------------------
-        // 11. Temporal behavior
-        // --------------------------------------------------------
-
+        // 11. Temporal
         if state.resonanceLocked {
-
-            result.predictedStartupTimeSeconds =
-                state.physicalElapsedTime
+            result.predictedStartupTimeSeconds = state.physicalElapsedTime
         }
+        result.measuredStartupTimeSeconds = measuredStartupTimeSeconds
 
-        result.measuredStartupTimeSeconds =
-            measuredStartupTimeSeconds
-
-        // --------------------------------------------------------
         // 12. Prediction vs experiment
-        // --------------------------------------------------------
-
-        if let measuredWavelengthMeters,
-           measuredWavelengthMeters > 0.0 {
-
-            result.wavelengthPredictionErrorPercent =
-                percentError(
-                    predicted:
-                        parameters.targetWavelengthMeters,
-                    measured:
-                        measuredWavelengthMeters
-                )
+        if let measuredWavelengthMeters, measuredWavelengthMeters > 0 {
+            result.wavelengthPredictionErrorPercent = percentError(
+                predicted: parameters.targetWavelengthMeters,
+                measured: measuredWavelengthMeters
+            )
+        }
+        if let predictedGain = result.predictedOpticalGain,
+           let measuredGain = result.measuredOpticalGain {
+            result.powerPredictionErrorPercent = percentError(
+                predicted: predictedGain,
+                measured: measuredGain
+            )
+        }
+        if let predictedThreshold = result.predictedThresholdInputPowerWatts,
+           let measuredThreshold = result.measuredThresholdInputPowerWatts,
+           measuredThreshold > 0 {
+            result.thresholdPredictionErrorPercent = percentError(
+                predicted: predictedThreshold,
+                measured: measuredThreshold
+            )
         }
 
-        if let predictedGain =
-            result.predictedOpticalGain,
-           let measuredGain =
-            result.measuredOpticalGain {
-
-            result.powerPredictionErrorPercent =
-                percentError(
-                    predicted:
-                        predictedGain,
-                    measured:
-                        measuredGain
-                )
-        }
-
-        if let predictedThreshold =
-            result.predictedThresholdInputPowerWatts,
-           let measuredThreshold =
-            result.measuredThresholdInputPowerWatts,
-           measuredThreshold > 0.0 {
-
-            result.thresholdPredictionErrorPercent =
-                percentError(
-                    predicted:
-                        predictedThreshold,
-                    measured:
-                        measuredThreshold
-                )
-        }
-
-        // --------------------------------------------------------
-        // 13. Independent reproduction
-        // --------------------------------------------------------
-
-        result.experimentalRunCount =
-            experimentalRunCount
-
-        result.reproducibleRuns =
-            reproducibleRuns
-
+        // 13. Reproduction
+        result.experimentalRunCount = experimentalRunCount
+        result.reproducibleRuns = reproducibleRuns
         result.independentReproductionSatisfied =
-            experimentalRunCount > 0 &&
-            reproducibleRuns == experimentalRunCount
-
-        // --------------------------------------------------------
-        // Physical output
-        //
-        // The simulator itself cannot claim that hardware emitted
-        // optical radiation.
-        // --------------------------------------------------------
+            experimentalRunCount > 0 && reproducibleRuns == experimentalRunCount
 
         result.physicalOutputDetected =
-            measuredOutputPowerWatts != nil &&
-            (measuredOutputPowerWatts ?? 0.0) > 0.0
+            measuredOutputPowerWatts != nil && (measuredOutputPowerWatts ?? 0) > 0
 
-        // --------------------------------------------------------
-        // Prediction validation
-        //
-        // Requires an actual experimental wavelength and output
-        // measurement and agreement with prediction.
-        // --------------------------------------------------------
-
-        let wavelengthAgrees =
-            result.wavelengthPredictionErrorPercent
-                .map {
-                    $0 <= 5.0
-                }
-                ?? false
-
-        let powerAgrees =
-            result.powerPredictionErrorPercent
-                .map {
-                    $0 <= 10.0
-                }
-                ?? false
-
+        let wavelengthAgrees = result.wavelengthPredictionErrorPercent.map { $0 <= 5 } ?? false
+        let powerAgrees = result.powerPredictionErrorPercent.map { $0 <= 10 } ?? false
         result.predictionValidated =
-            result.physicalOutputDetected &&
-            wavelengthAgrees &&
-            powerAgrees
+            result.physicalOutputDetected && wavelengthAgrees && powerAgrees
 
-        // --------------------------------------------------------
         // Energy accounting
-        // --------------------------------------------------------
-
-        if let inputEnergy =
-            measuredInputEnergyJoules,
-           let outputEnergy =
-            measuredOutputEnergyJoules {
-
-            let losses =
-                max(
-                    inputEnergy -
-                    outputEnergy,
-                    0.0
-                )
-
-            let residual =
-                inputEnergy -
-                outputEnergy -
-                losses
-
-            result.energyResidualJoules =
-                residual
-
+        if let inputEnergy = measuredInputEnergyJoules,
+           let outputEnergy = measuredOutputEnergyJoules {
+            let losses = max(inputEnergy - outputEnergy, 0)
+            let residual = inputEnergy - outputEnergy - losses
+            result.energyResidualJoules = residual
             result.energyAccountingClosed =
-                abs(residual) <=
-                max(
-                    inputEnergy * 0.01,
-                    1.0e-18
-                )
+                abs(residual) <= max(inputEnergy * 0.01, 1e-18)
         }
+
+        // Current / pump proxies (new)
+        result.driveCurrentAmps = state.driveCurrentAmps
+        result.thresholdCurrentAmps = state.thresholdCurrentAmps
+        result.excessCurrentAmps = state.excessCurrentAmps
+        result.injectedElectronsPerSecond = state.injectedElectronsPerSecond
+        result.usefulExcitationsPerSecond = state.usefulExcitationsPerSecond
+        result.photonGenerationRate = state.photonGenerationRate
+        result.qrtlToEMCouplingProxy = state.qrtlToEMCouplingProxy
 
         return result
     }
-
-    // ------------------------------------------------------------
-    // Round-trip loss model
-    // ------------------------------------------------------------
 
     private static func calculateRoundTripLoss(
         state: QRTLState,
         parameters: QRTLLaserParameters
     ) -> Double {
-
-        let outputLoss =
-            parameters.outputTransmission
-
-        let modeledLossReduction =
-            QRTLLaserPhysics.clamp(
-                state.lossReduction,
-                0.0,
-                parameters.maximumLossReduction
-            )
-
-        return QRTLLaserPhysics.clamp(
-            outputLoss *
-            (1.0 - modeledLossReduction),
-            0.0,
-            1.0
+        let outputLoss = parameters.outputTransmission
+        let absorption = parameters.absorptionLoss
+        let scattering = parameters.scatteringLoss
+        let modeledLossReduction = QRTLLaserPhysics.clamp(
+            state.lossReduction, 0, parameters.maximumLossReduction
         )
+        let total = (outputLoss + absorption + scattering) * (1.0 - modeledLossReduction)
+        return QRTLLaserPhysics.clamp(total, 0, 1)
     }
 
-    // ------------------------------------------------------------
-    // Percentage error
-    // ------------------------------------------------------------
-
-    private static func percentError(
-        predicted: Double,
-        measured: Double
-    ) -> Double {
-
-        guard abs(predicted) > 1.0e-30 else {
-            return 0.0
-        }
-
-        return abs(
-            measured - predicted
-        )
-        /
-        abs(predicted)
-        *
-        100.0
+    private static func percentError(predicted: Double, measured: Double) -> Double {
+        guard abs(predicted) > 1e-30 else { return 0 }
+        return abs(measured - predicted) / abs(predicted) * 100
     }
 }
 
+// MARK: - LaserMeasurementState (extended)
+
 struct LaserMeasurementState {
-
-    // ------------------------------------------------------------
-    // Stage 1 — QRTL convergence
-    // ------------------------------------------------------------
-
-    var qrtlPhaseError: Double = 0.0
-    var qrtlPhaseClosure: Double = 0.0
-    var qrtlResonanceResponse: Double = 0.0
-    var qrtlCoupling: Double = 0.0
-    var qrtlCoherence: Double = 0.0
+    // Stage 1
+    var qrtlPhaseError: Double = 0
+    var qrtlPhaseClosure: Double = 0
+    var qrtlResonanceResponse: Double = 0
+    var qrtlCoupling: Double = 0
+    var qrtlCoherence: Double = 0
     var qrtlLocked: Bool = false
 
-    // ------------------------------------------------------------
-    // Stage 2 — Physical optical gain
-    //
-    // These are deliberately separate from combinedGain.
-    //
-    // combinedGain is the existing QRTL model metric.
-    // opticalGain is an optical-power measurement/prediction.
-    // ------------------------------------------------------------
-
+    // Stage 2
     var inputOpticalPowerWatts: Double?
     var outputOpticalPowerWatts: Double?
-
     var predictedOpticalGain: Double?
     var measuredOpticalGain: Double?
-
     var gainCoefficientPerMeter: Double?
 
-    // ------------------------------------------------------------
-    // Stage 3 — Laser threshold
-    // ------------------------------------------------------------
-
+    // Stage 3
     var predictedThresholdInputPowerWatts: Double?
     var measuredThresholdInputPowerWatts: Double?
     var thresholdReached: Bool = false
 
-    // ------------------------------------------------------------
-    // Stage 4 — Input → output power
-    // ------------------------------------------------------------
-
+    // Stage 4
     var absorbedPumpPowerWatts: Double?
     var intracavityPowerWatts: Double?
     var lossPowerWatts: Double?
 
-    // ------------------------------------------------------------
-    // Stage 5 — Optical efficiency
-    // ------------------------------------------------------------
-
+    // Stage 5
     var inputEnergyJoules: Double?
     var outputEnergyJoules: Double?
-
     var predictedEfficiency: Double?
     var measuredEfficiency: Double?
 
-    // ------------------------------------------------------------
-    // Stage 6 — Calcium-40 characterization
-    //
-    // The target wavelength is a configured model prediction.
-    // It is NOT automatically treated as an experimentally
-    // established Ca-40 transition.
-    // ------------------------------------------------------------
-
+    // Stage 6
     var calcium40TransitionEnergyJoules: Double?
     var calcium40TransitionFrequencyHz: Double?
     var calcium40TransitionWavelengthMeters: Double?
-
     var calcium40LifetimeSeconds: Double?
     var calcium40LinewidthHz: Double?
 
-    // ------------------------------------------------------------
-    // Stage 7 — Population / excitation dynamics
-    // ------------------------------------------------------------
-
+    // Stage 7
     var totalPopulation: Double?
     var lowerStatePopulation: Double?
     var upperStatePopulation: Double?
     var excitationFraction: Double?
     var populationInversion: Double?
 
-    // ------------------------------------------------------------
-    // Stage 8 — Cavity gain / loss
-    // ------------------------------------------------------------
-
+    // Stage 8
     var roundTripGain: Double?
     var mirrorLoss: Double?
     var absorptionLoss: Double?
     var scatteringLoss: Double?
     var outputCouplingLoss: Double?
     var roundTripLoss: Double?
-
     var netRoundTripGain: Double?
 
-    // ------------------------------------------------------------
-    // Stage 9 — QRTL energy transfer
-    // ------------------------------------------------------------
-
+    // Stage 9
     var energyBeforeQRTLInteractionJoules: Double?
     var energyAfterQRTLInteractionJoules: Double?
     var qrtlEnergyTransferredJoules: Double?
     var qrtlInteractionRatePerSecond: Double?
 
-    // ------------------------------------------------------------
-    // Stage 10 — Output spectrum
-    // ------------------------------------------------------------
-
+    // Stage 10
     var predictedWavelengthMeters: Double?
     var measuredWavelengthMeters: Double?
-
     var predictedLinewidthHz: Double?
     var measuredLinewidthHz: Double?
-
     var spectralPowerWatts: Double?
+    // New – from FFT of lattice signal
+    var simulatedDominantWavelengthMeters: Double?
+    var simulatedDominantFrequencyHz: Double?
+    var wavelengthClosenessPercent: Double?
 
-    // ------------------------------------------------------------
-    // Stage 11 — Temporal output
-    // ------------------------------------------------------------
-
+    // Stage 11
     var predictedStartupTimeSeconds: Double?
     var measuredStartupTimeSeconds: Double?
-
     var measuredPulseDurationSeconds: Double?
     var measuredRepetitionRateHz: Double?
-
     var outputStability: Double?
 
-    // ------------------------------------------------------------
-    // Stage 12 — Prediction vs experiment
-    // ------------------------------------------------------------
-
+    // Stage 12
     var wavelengthPredictionErrorPercent: Double?
     var powerPredictionErrorPercent: Double?
     var thresholdPredictionErrorPercent: Double?
 
-    // ------------------------------------------------------------
-    // Stage 13 — Independent reproduction
-    // ------------------------------------------------------------
-
+    // Stage 13
     var experimentalRunCount: Int = 0
     var reproducibleRuns: Int = 0
-
-    // ------------------------------------------------------------
-    // Final verification states
-    // ------------------------------------------------------------
 
     var physicalOutputDetected: Bool = false
     var predictionValidated: Bool = false
     var independentReproductionSatisfied: Bool = false
 
-    // ------------------------------------------------------------
-    // Energy accounting
-    // ------------------------------------------------------------
-
     var energyResidualJoules: Double?
     var energyAccountingClosed: Bool = false
+
+    // Current / pump / photon-rate proxies
+    var driveCurrentAmps: Double?
+    var thresholdCurrentAmps: Double?
+    var excessCurrentAmps: Double?
+    var injectedElectronsPerSecond: Double?
+    var usefulExcitationsPerSecond: Double?
+    var photonGenerationRate: Double?
+    var qrtlToEMCouplingProxy: Double?
 }
+
+// MARK: - Parameters (extended with current, lattice, losses)
 
 struct QRTLLaserParameters {
 
-    // ------------------------------------------------------------
-    // Standard constants
-    // ------------------------------------------------------------
+    let driveCurrentAmps: Double = 0.500          // was 0.200 (200 mA → 500 mA)
 
+    // More of the current becomes useful excitation
+    let injectionEfficiency: Double = 0.90        // was 0.70
+
+    // Optional: lower the current needed before excess current appears
+    let thresholdCurrentAmps: Double = 0.050      // was 0.100
+    
+    // Standard constants
     let speedOfLight = 2.99792458e8
     let planckConstant = 6.62607015e-34
-    let targetWavelengthMeters = 2.94e-6
+    let electronCharge = 1.60217662e-19
+    let targetWavelengthMeters = 2.94e-6          // 2.94 µm
 
-    var targetFrequency: Double {
-        speedOfLight / targetWavelengthMeters
-    }
+    var targetFrequency: Double { speedOfLight / targetWavelengthMeters }   // ~1.0197e14 Hz
+    var photonEnergy: Double { planckConstant * targetFrequency }           // ~6.76e-20 J ≈ 0.422 eV
 
-    var photonEnergy: Double {
-        planckConstant * targetFrequency
-    }
+    // Desired optical output (example)
+    let targetOutputPowerWatts: Double = 0.010     // 10 mW
 
-    // ------------------------------------------------------------
-    // Cavity
-    // ------------------------------------------------------------
-
+  
+    // Cavity geometry
     let cavityLength: Double = 6.0
-
     let gainStartZ: Double = 1.5
     let gainEndZ: Double = 4.5
 
-    // ------------------------------------------------------------
-    // Visualization timing
-    //
-    // This controls only the visible animation.
-    // It does NOT modify physical cavity timing.
-    // ------------------------------------------------------------
-
+    // Visualization timing (does NOT affect physical time)
     let visualOneWayDuration: Double = 0.45
 
-    // Physical cavity timing:
-    //
-    // tRT = 2L / c
-    //
+    var physicalOneWayTime: Double { cavityLength / speedOfLight }
+    var physicalRoundTripTime: Double { (2.0 * cavityLength) / speedOfLight }
 
-    var physicalOneWayTime: Double {
-        cavityLength / speedOfLight
-    }
-
-    var physicalRoundTripTime: Double {
-        (2.0 * cavityLength) / speedOfLight
-    }
-
-    // ------------------------------------------------------------
     // QRTL initial state
-    // ------------------------------------------------------------
-
     let initialPhaseError: Double = 0.50 * Double.pi
     let initialCoherence: Double = 0.70
     let maximumCoherence: Double = 0.95
-
     let initialTwistCurrent: Double = 0.05
     let targetTwistCurrent: Double = 1.0
-
     let initialShellEnergy: Double = 0.10
     let targetShellEnergy: Double = 1.0
-
     let qrtlBaseCoupling: Double = 1.0
-
-    // Phenomenological resonance width.
     let resonanceWidth: Double = 0.35
 
-    // ------------------------------------------------------------
-    // Bootstrap / convergence parameters
-    //
-    // These are model parameters, not experimental constants.
-    // ------------------------------------------------------------
-
+    // Bootstrap / convergence
     let phaseCorrectionBase: Double = 0.10
     let phaseCorrectionClosureWeight: Double = 0.12
     let phaseCorrectionCouplingWeight: Double = 0.18
-
     let couplingPhaseWeight: Double = 0.45
     let couplingResonanceWeight: Double = 0.35
     let couplingShellWeight: Double = 0.20
-
     let couplingRelaxation: Double = 0.35
-
     let twistBaseDrive: Double = 0.10
     let twistClosureDrive: Double = 0.18
     let twistCouplingDrive: Double = 0.16
 
-    // ------------------------------------------------------------
-    // Loss / beam model
-    // ------------------------------------------------------------
-
+    // Loss / beam
     let maximumLossReduction: Double = 0.25
     let minimumBeamAreaFactor: Double = 0.50
+    let absorptionLoss: Double = 0.02
+    let scatteringLoss: Double = 0.01
 
-    // ------------------------------------------------------------
     // Output coupler
-    // ------------------------------------------------------------
-
     let outputTransmission: Double = 0.10
+    var outputReflection: Double { 1.0 - outputTransmission }
 
-    var outputReflection: Double {
-        1.0 - outputTransmission
-    }
-
-    // ------------------------------------------------------------
-    // Resonance-lock criteria
-    // ------------------------------------------------------------
-
+    // Lock criteria
     let phaseClosureLockThreshold: Double = 0.99
     let maximumPhaseErrorForLock: Double = 0.05
     let qrtlCouplingLockThreshold: Double = 0.90
     let coherenceLockThreshold: Double = 0.94
-
-    // Must remain satisfied for complete round trips.
     let requiredStableLockRounds: Int = 5
 
-    // ------------------------------------------------------------
     // Visualization
-    // ------------------------------------------------------------
-
     let photonCount: Int = 90
     let photonRadius: CGFloat = 0.045
-
-    // Safety timeout only.
-    //
-    // NOTE: This must stay comfortably above the time the QRTL
-    // model actually needs to reach resonance lock, or the
-    // simulation will always be killed right before it fires.
-    //
-    // With the current parameters, lock requires 5 consecutive
-    // stable round trips, which empirically completes around the
-    // 9th round trip (~9 * 2 * visualOneWayDuration ≈ 8.1s). The
-    // previous value of 8.0s was *shorter* than that, so the timer
-    // always stopped the sim one round trip short of lockOK ever
-    // going true for 5 consecutive rounds — the laser could never
-    // reach the fire state. 20.0s leaves real margin.
     let maximumSimulationDuration: Double = 20.0
+
+    // Calcium lattice
+    let latticeSize: Int = 32                      // 1-D chain for simplicity
+    let gaussianPumpSigmaCells: Double = 6.0
+    let neighborCouplingStrength: Double = 0.08
+    let latticeDampingBase: Double = 0.015
+    let inversionThresholdForLasing: Double = 0.05
+    let wavelengthClosenessTolerancePercent: Double = 5.0
 }
 
-// MARK: - QRTL State
+// MARK: - QRTL State (extended with lattice & current proxies)
 
 struct QRTLState {
-
     var phaseError: Double
     var phaseClosure: Double
     var twistCurrent: Double
@@ -1014,19 +491,32 @@ struct QRTLState {
     var roundTripCount: Int
     var gainMediumCrossings: Int
     var stableLockRounds: Int
-
     var resonanceLocked: Bool
 
-    // Authoritative output state.
     var circulatingFieldFactor: Double
     var transmittedOutputFactor: Double
     var outputEvents: Int
     var outputEnabled: Bool
 
     var currentDirection: CavityDirection
-
-    // Actual modeled physical path time.
     var physicalElapsedTime: Double
+
+    // New lattice / current / spectrum proxies
+    var driveCurrentAmps: Double
+    var thresholdCurrentAmps: Double
+    var excessCurrentAmps: Double
+    var injectedElectronsPerSecond: Double
+    var usefulExcitationsPerSecond: Double
+    var qrtlToEMCouplingProxy: Double
+    var populationInversionProxy: Double
+    var photonGenerationRate: Double          // photons / s (model)
+    var latticeTotalPopulation: Double
+    var latticeUpperPopulation: Double
+    var latticeLowerPopulation: Double
+    var latticeExcitationFraction: Double
+    var simulatedDominantFrequencyHz: Double?
+    var simulatedDominantWavelengthMeters: Double?
+    var wavelengthClosenessPercent: Double?
 }
 
 enum CavityDirection: String {
@@ -1034,100 +524,44 @@ enum CavityDirection: String {
     case returnPath = "-Z"
 }
 
-// MARK: - Photon / Mode Marker
+// MARK: - Photon / Mode Marker (unchanged)
 
 struct PhotonState {
-
     let id: Int
-
     var position: SCNVector3
     var baseRadius: Float
-
     var z: Double
     var radialOffset: Double
-
     var direction: CavityDirection
-
-    // Visualization state only.
     var hasEnteredGainThisTraversal: Bool
 
-    init(
-        id: Int,
-        cavityLength: Double
-    ) {
+    init(id: Int, cavityLength: Double) {
         self.id = id
-
-        self.baseRadius = Float(
-            0.030 + 0.030 * Double(id % 7) / 6.0
-        )
-
-        self.radialOffset =
-            0.20
-            +
-            1.15
-            * Double(id % 17)
-            / 16.0
-
-        // Distribute markers deterministically around the
-        // complete cavity traversal rather than randomizing
-        // direction/position.
-
-        let traversalFraction =
-            Double(id)
-            /
-            Double(max(1, 90))
-
-        let totalTraversal =
-            2.0 * cavityLength
-
-        let traversalPosition =
-            traversalFraction * totalTraversal
-
+        self.baseRadius = Float(0.030 + 0.030 * Double(id % 7) / 6.0)
+        self.radialOffset = 0.20 + 1.15 * Double(id % 17) / 16.0
+        let traversalFraction = Double(id) / Double(max(1, 90))
+        let totalTraversal = 2.0 * cavityLength
+        let traversalPosition = traversalFraction * totalTraversal
         if traversalPosition <= cavityLength {
             self.z = traversalPosition
             self.direction = .forward
         } else {
-            self.z =
-                totalTraversal
-                - traversalPosition
-
+            self.z = totalTraversal - traversalPosition
             self.direction = .returnPath
         }
-
-        let angle =
-            Double(id) * 0.71
-
+        let angle = Double(id) * 0.71
         self.position = SCNVector3(
             Float(cos(angle) * radialOffset),
             Float(sin(angle) * radialOffset),
             Float(z)
         )
-
         self.hasEnteredGainThisTraversal = false
     }
 
-    mutating func updateVisualPosition(
-        coherence: Double
-    ) {
-        let alignment =
-            max(
-                0.0,
-                min(
-                    1.0,
-                    (coherence - 0.70) / 0.25
-                )
-            )
-
-        let visualRadius =
-            radialOffset
-            *
-            (1.0 - 0.70 * alignment)
-
-        let angle =
-            Double(id) * 0.71
-            +
-            z * 0.18
-
+    mutating func updateVisualPosition(coherence: Double) {
+        let alignment = max(0, min(1, (coherence - 0.70) / 0.25))
+        let visualRadius = radialOffset * (1.0 - 0.70 * alignment)
+        let angle = Double(id) * 0.71 + z * 0.18
         position = SCNVector3(
             Float(cos(angle) * visualRadius),
             Float(sin(angle) * visualRadius),
@@ -1136,70 +570,26 @@ struct PhotonState {
     }
 }
 
-// MARK: - QRTL Physics
+// MARK: - Physics helpers
 
 enum QRTLLaserPhysics {
 
-    // ------------------------------------------------------------
-    // Standard physics
-    // ------------------------------------------------------------
-
-    static func frequency(
-        wavelength: Double,
-        parameters: QRTLLaserParameters
-    ) -> Double {
+    static func frequency(wavelength: Double, parameters: QRTLLaserParameters) -> Double {
         parameters.speedOfLight / wavelength
     }
 
-    static func photonEnergy(
-        frequency: Double,
-        parameters: QRTLLaserParameters
-    ) -> Double {
+    static func photonEnergy(frequency: Double, parameters: QRTLLaserParameters) -> Double {
         parameters.planckConstant * frequency
     }
 
-    // ------------------------------------------------------------
-    // Proposed QRTL phenomenological equations
-    // ------------------------------------------------------------
-
-    /// Phase closure:
-    ///
-    /// Cφ = (1 + cos(Δφ)) / 2
-    ///
-    /// 0 = maximally mismatched
-    /// 1 = phase closed
-
-    static func phaseClosure(
-        phaseError: Double
-    ) -> Double {
-
-        let value =
-            (1.0 + cos(phaseError)) / 2.0
-
-        return clamp(
-            value,
-            0.0,
-            1.0
-        )
+    static func phaseClosure(phaseError: Double) -> Double {
+        clamp((1.0 + cos(phaseError)) / 2.0, 0, 1)
     }
 
-    static func smoothStep(
-        _ value: Double
-    ) -> Double {
-
-        let x =
-            clamp(
-                value,
-                0.0,
-                1.0
-            )
-
+    static func smoothStep(_ value: Double) -> Double {
+        let x = clamp(value, 0, 1)
         return x * x * (3.0 - 2.0 * x)
     }
-
-    // ------------------------------------------------------------
-    // Twist current
-    // ------------------------------------------------------------
 
     static func twistCurrent(
         oldCurrent: Double,
@@ -1207,117 +597,29 @@ enum QRTLLaserPhysics {
         coupling: Double,
         parameters: QRTLLaserParameters
     ) -> Double {
-
-        let drive =
-            parameters.twistBaseDrive
-            +
-            parameters.twistClosureDrive
-            * phaseClosure
-            +
-            parameters.twistCouplingDrive
-            * coupling
-
-        let boundedDrive =
-            clamp(
-                drive,
-                0.0,
-                1.0
-            )
-
-        let next =
-            oldCurrent
-            +
-            (
-                parameters.targetTwistCurrent
-                -
-                oldCurrent
-            )
-            *
-            boundedDrive
-
-        return clamp(
-            next,
-            0.0,
-            parameters.targetTwistCurrent
-        )
+        let drive = parameters.twistBaseDrive
+            + parameters.twistClosureDrive * phaseClosure
+            + parameters.twistCouplingDrive * coupling
+        let boundedDrive = clamp(drive, 0, 1)
+        let next = oldCurrent + (parameters.targetTwistCurrent - oldCurrent) * boundedDrive
+        return clamp(next, 0, parameters.targetTwistCurrent)
     }
 
-    // ------------------------------------------------------------
-    // Resonance response
-    // ------------------------------------------------------------
-
-    static func resonanceResponse(
-        phaseError: Double,
-        parameters: QRTLLaserParameters
-    ) -> Double {
-
-        let normalizedDetuning =
-            abs(phaseError) / Double.pi
-
-        let exponent =
-            -pow(
-                normalizedDetuning
-                /
-                parameters.resonanceWidth,
-                2.0
-            )
-
-        return clamp(
-            exp(exponent),
-            0.0,
-            1.0
-        )
+    static func resonanceResponse(phaseError: Double, parameters: QRTLLaserParameters) -> Double {
+        let normalizedDetuning = abs(phaseError) / Double.pi
+        let exponent = -pow(normalizedDetuning / parameters.resonanceWidth, 2)
+        return clamp(exp(exponent), 0, 1)
     }
-
-    // ------------------------------------------------------------
-    // Shell energy
-    // ------------------------------------------------------------
 
     static func shellEnergy(
         resonanceResponse: Double,
         normalizedTwistCurrent: Double,
         parameters: QRTLLaserParameters
     ) -> Double {
-
-        let excitation =
-            clamp(
-                resonanceResponse
-                *
-                normalizedTwistCurrent,
-                0.0,
-                1.0
-            )
-
-        return
-            parameters.initialShellEnergy
-            +
-            (
-                parameters.targetShellEnergy
-                -
-                parameters.initialShellEnergy
-            )
-            *
-            excitation
+        let excitation = clamp(resonanceResponse * normalizedTwistCurrent, 0, 1)
+        return parameters.initialShellEnergy
+            + (parameters.targetShellEnergy - parameters.initialShellEnergy) * excitation
     }
-
-    // ------------------------------------------------------------
-    // QRTL coupling
-    //
-    // IMPORTANT:
-    //
-    // The old multiplicative formula:
-    //
-    //     closure × resonance × shell
-    //
-    // created a bootstrap bottleneck.
-    //
-    // This version first constructs a bounded interaction target
-    // from the three QRTL state quantities, then relaxes the
-    // existing coupling toward that target.
-    //
-    // Therefore repeated gain-medium interactions can progressively
-    // move the system toward the lock region.
-    // ------------------------------------------------------------
 
     static func qrtlCoupling(
         oldCoupling: Double,
@@ -1326,134 +628,51 @@ enum QRTLLaserPhysics {
         shellEnergy: Double,
         parameters: QRTLLaserParameters
     ) -> Double {
-
-        let normalizedShell =
-            clamp(
-                (
-                    shellEnergy
-                    -
-                    parameters.initialShellEnergy
-                )
-                /
-                max(
-                    1.0e-12,
-                    parameters.targetShellEnergy
-                    -
-                    parameters.initialShellEnergy
-                ),
-                0.0,
-                1.0
-            )
-
-        let interactionTarget =
-            parameters.qrtlBaseCoupling
-            *
-            (
-                parameters.couplingPhaseWeight
-                * phaseClosure
-                +
-                parameters.couplingResonanceWeight
-                * resonanceResponse
-                +
-                parameters.couplingShellWeight
-                * normalizedShell
-            )
-
-        let next =
-            oldCoupling
-            +
-            (
-                interactionTarget
-                -
-                oldCoupling
-            )
-            *
-            parameters.couplingRelaxation
-
-        return clamp(
-            next,
-            0.0,
-            1.0
+        let normalizedShell = clamp(
+            (shellEnergy - parameters.initialShellEnergy) /
+            max(1e-12, parameters.targetShellEnergy - parameters.initialShellEnergy),
+            0, 1
         )
+        let interactionTarget = parameters.qrtlBaseCoupling * (
+            parameters.couplingPhaseWeight * phaseClosure
+            + parameters.couplingResonanceWeight * resonanceResponse
+            + parameters.couplingShellWeight * normalizedShell
+        )
+        let next = oldCoupling + (interactionTarget - oldCoupling) * parameters.couplingRelaxation
+        return clamp(next, 0, 1)
     }
 
-    // ------------------------------------------------------------
-    // Coherence
-    // ------------------------------------------------------------
-
-    static func coherence(
-        coupling: Double,
-        parameters: QRTLLaserParameters
-    ) -> Double {
-
+    static func coherence(coupling: Double, parameters: QRTLLaserParameters) -> Double {
         parameters.initialCoherence
-        +
-        (
-            parameters.maximumCoherence
-            -
-            parameters.initialCoherence
-        )
-        *
-        coupling
+            + (parameters.maximumCoherence - parameters.initialCoherence) * coupling
     }
 
-    // ------------------------------------------------------------
-    // Loss
-    // ------------------------------------------------------------
-
-    static func lossReduction(
-        coupling: Double,
-        parameters: QRTLLaserParameters
-    ) -> Double {
-
-        parameters.maximumLossReduction
-        *
-        coupling
+    static func lossReduction(coupling: Double, parameters: QRTLLaserParameters) -> Double {
+        parameters.maximumLossReduction * coupling
     }
 
-    // ------------------------------------------------------------
-    // Beam area
-    // ------------------------------------------------------------
-
-    static func beamAreaFactor(
-        coupling: Double,
-        parameters: QRTLLaserParameters
-    ) -> Double {
-
-        1.0
-        -
-        (
-            1.0
-            -
-            parameters.minimumBeamAreaFactor
-        )
-        *
-        coupling
+    static func beamAreaFactor(coupling: Double, parameters: QRTLLaserParameters) -> Double {
+        1.0 - (1.0 - parameters.minimumBeamAreaFactor) * coupling
     }
 
-    static func clamp(
-        _ value: Double,
-        _ minimum: Double,
-        _ maximum: Double
-    ) -> Double {
+    static func clamp(_ value: Double, _ minimum: Double, _ maximum: Double) -> Double {
+        min(max(value, minimum), maximum)
+    }
 
-        min(
-            max(
-                value,
-                minimum
-            ),
-            maximum
-        )
+    // Gaussian pump weight for cell i (center of lattice)
+    static func gaussianPumpWeight(cellIndex: Int, size: Int, sigma: Double) -> Double {
+        let center = Double(size - 1) / 2.0
+        let x = Double(cellIndex) - center
+        return exp(-0.5 * (x / sigma) * (x / sigma))
     }
 }
 
-// MARK: - Master Monitor
+// MARK: - Master Monitor (core evolution + lattice + FFT)
 
 @MainActor
 final class MasterMonitor: ObservableObject {
 
-    @Published private(set) var measurementState =
-        LaserMeasurementState()
+    @Published private(set) var measurementState = LaserMeasurementState()
     @Published var measuredInputPowerWatts: Double?
     @Published var measuredOutputPowerWatts: Double?
     @Published var measuredWavelengthMeters: Double?
@@ -1462,106 +681,140 @@ final class MasterMonitor: ObservableObject {
     @Published var measuredStartupTimeSeconds: Double?
     @Published var measuredInputEnergyJoules: Double?
     @Published var measuredOutputEnergyJoules: Double?
-
     @Published var experimentalRunCount: Int = 0
     @Published var reproducibleRuns: Int = 0
-    
+
     @Published private(set) var qrtlState: QRTLState
     @Published private(set) var photonNodes: [PhotonState]
-
     @Published private(set) var isRunning = false
     @Published private(set) var elapsedTime: Double = 0.0
 
     private let parameters = QRTLLaserParameters()
-
     private var timer: Timer?
     private var lastTick: Date?
 
-    // ------------------------------------------------------------
-    // Authoritative representative cavity mode
-    // ------------------------------------------------------------
-
-    private var representativeZ: Double = 0.0
+    // Representative cavity mode
+    private var representativeZ: Double = 0
     private var representativeDirection: CavityDirection = .forward
-    private var previousZ: Double = 0.0
-
+    private var previousZ: Double = 0
     private var gainCrossingInProgress = false
     private var activeGainTraversalDirection: CavityDirection?
 
-    // ------------------------------------------------------------
-    // QRTL evolving state
-    // ------------------------------------------------------------
-
+    // QRTL evolving scalars
     private var phaseError: Double
     private var twistCurrent: Double
-
     private var coupling: Double
     private var shellEnergy: Double
     private var resonanceResponse: Double
     private var phaseClosure: Double
     private var coherence: Double
-
     private var roundTripCount = 0
     private var gainMediumCrossings = 0
     private var stableLockRounds = 0
-
-    // ------------------------------------------------------------
-    // Authoritative output state
-    // ------------------------------------------------------------
-
+    private var resonanceLocked = false
     private var circulatingFieldFactor: Double = 1.0
     private var transmittedOutputFactor: Double = 0.0
     private var outputEvents = 0
-
-    // ------------------------------------------------------------
-    // Lock
-    // ------------------------------------------------------------
-
-    private var resonanceLocked = false
-
-    // ------------------------------------------------------------
-    // Physical traversal accounting
-    //
-    // We accumulate modeled optical path distance and divide by c.
-    //
-    // This means visual animation speed does not determine physical
-    // elapsed time.
-    // ------------------------------------------------------------
-
     private var physicalPathDistance: Double = 0.0
 
-    // ------------------------------------------------------------
-    // Thread protection
-    // ------------------------------------------------------------
+    // Calcium lattice
+    private var lattice: [CalciumCell]
+    private var latticeSignal: [Double] = []          // time-domain for FFT
+    private let signalCapacity = 2048
+    private var lastFFTTime: Double = 0
+    private let fftInterval: Double = 0.25            // seconds of wall time
+
+    // Current / rate proxies (computed each step)
+    private var excessCurrentAmps: Double = 0
+    private var injectedElectronsPerSecond: Double = 0
+    private var usefulExcitationsPerSecond: Double = 0
+    private var qrtlToEMCouplingProxy: Double = 0
+    private var populationInversionProxy: Double = 0
+    private var photonGenerationRate: Double = 0
+    private var simulatedDominantFrequencyHz: Double?
+    private var simulatedDominantWavelengthMeters: Double?
+    private var wavelengthClosenessPercent: Double?
 
     private let stateLock = NSLock()
 
     init() {
+        // ------------------------------------------------------------------
+        // 1. Initialize EVERY stored property (no instance methods yet)
+        // ------------------------------------------------------------------
 
-        phaseError =
-            parameters.initialPhaseError
-
-        phaseClosure =
-            QRTLLaserPhysics.phaseClosure(
-                phaseError: phaseError
-            )
-
-        resonanceResponse =
-            QRTLLaserPhysics.resonanceResponse(
-                phaseError: phaseError,
-                parameters: parameters
-            )
-
-        twistCurrent =
-            parameters.initialTwistCurrent
-
-        shellEnergy =
-            parameters.initialShellEnergy
-
+        // QRTL scalar state
+        phaseError = parameters.initialPhaseError
+        phaseClosure = QRTLLaserPhysics.phaseClosure(phaseError: phaseError)
+        resonanceResponse = QRTLLaserPhysics.resonanceResponse(
+            phaseError: phaseError,
+            parameters: parameters
+        )
+        twistCurrent = parameters.initialTwistCurrent
+        shellEnergy = parameters.initialShellEnergy
         coupling = 0.0
+        coherence = parameters.initialCoherence
 
-        coherence =
-            parameters.initialCoherence
+        // Lattice
+        lattice = (0..<parameters.latticeSize).map { _ in CalciumCell.randomInitial() }
+        latticeSignal = []
+        lastFFTTime = 0.0
+
+        // Current / rate proxies (temporary zeros – will be overwritten immediately)
+        excessCurrentAmps = 0.0
+        injectedElectronsPerSecond = 0.0
+        usefulExcitationsPerSecond = 0.0
+        qrtlToEMCouplingProxy = 0.0
+        populationInversionProxy = 0.0
+        photonGenerationRate = 0.0
+        simulatedDominantFrequencyHz = nil
+        simulatedDominantWavelengthMeters = nil
+        wavelengthClosenessPercent = nil
+
+        // Representative cavity mode
+        representativeZ = 0.0
+        previousZ = 0.0
+        representativeDirection = .forward
+        gainCrossingInProgress = false
+        activeGainTraversalDirection = nil
+
+        // Counters / flags
+        roundTripCount = 0
+        gainMediumCrossings = 0
+        stableLockRounds = 0
+        resonanceLocked = false
+        circulatingFieldFactor = 1.0
+        transmittedOutputFactor = 0.0
+        outputEvents = 0
+        physicalPathDistance = 0.0
+
+        // Photon markers
+        let photonCount = parameters.photonCount
+        let cavityLength = parameters.cavityLength
+        photonNodes = (0..<photonCount).map {
+            PhotonState(id: $0, cavityLength: cavityLength)
+        }
+
+        // Published properties that need an initial value
+        isRunning = false
+        elapsedTime = 0.0
+        measurementState = LaserMeasurementState()
+
+        // ------------------------------------------------------------------
+        // 2. Compute the initial current proxies (pure calculation, no self)
+        // ------------------------------------------------------------------
+        excessCurrentAmps = max(0, parameters.driveCurrentAmps - parameters.thresholdCurrentAmps)
+        injectedElectronsPerSecond = excessCurrentAmps / parameters.electronCharge
+        usefulExcitationsPerSecond = injectedElectronsPerSecond * parameters.injectionEfficiency
+
+        // ------------------------------------------------------------------
+        // 3. Build the initial QRTLState value INLINE (still no instance methods)
+        // ------------------------------------------------------------------
+        let lossReduction = QRTLLaserPhysics.lossReduction(coupling: coupling, parameters: parameters)
+        let beamAreaFactor = QRTLLaserPhysics.beamAreaFactor(coupling: coupling, parameters: parameters)
+        let coherenceGain = coherence / max(parameters.initialCoherence, 1e-12)
+        let lossGain = 1.0 + lossReduction
+        let concentrationGain = 1.0 / max(beamAreaFactor, 1e-12)
+        let combinedGain = coherenceGain * lossGain * concentrationGain
 
         qrtlState = QRTLState(
             phaseError: phaseError,
@@ -1571,2267 +824,1079 @@ final class MasterMonitor: ObservableObject {
             shellEnergy: shellEnergy,
             coupling: coupling,
             coherence: coherence,
-            lossReduction: 0.0,
-            beamAreaFactor: 1.0,
-            coherenceGain: 1.0,
-            lossGain: 1.0,
-            concentrationGain: 1.0,
-            combinedGain: 1.0,
-            roundTripCount: 0,
-            gainMediumCrossings: 0,
-            stableLockRounds: 0,
-            resonanceLocked: false,
-            circulatingFieldFactor: 1.0,
-            transmittedOutputFactor: 0.0,
-            outputEvents: 0,
+            lossReduction: lossReduction,
+            beamAreaFactor: beamAreaFactor,
+            coherenceGain: coherenceGain,
+            lossGain: lossGain,
+            concentrationGain: concentrationGain,
+            combinedGain: combinedGain,
+            roundTripCount: roundTripCount,
+            gainMediumCrossings: gainMediumCrossings,
+            stableLockRounds: stableLockRounds,
+            resonanceLocked: resonanceLocked,
+            circulatingFieldFactor: circulatingFieldFactor,
+            transmittedOutputFactor: transmittedOutputFactor,
+            outputEvents: outputEvents,
             outputEnabled: false,
-            currentDirection: .forward,
-            physicalElapsedTime: 0.0
+            currentDirection: representativeDirection,
+            physicalElapsedTime: 0.0,
+            driveCurrentAmps: parameters.driveCurrentAmps,
+            thresholdCurrentAmps: parameters.thresholdCurrentAmps,
+            excessCurrentAmps: excessCurrentAmps,
+            injectedElectronsPerSecond: injectedElectronsPerSecond,
+            usefulExcitationsPerSecond: usefulExcitationsPerSecond,
+            qrtlToEMCouplingProxy: qrtlToEMCouplingProxy,
+            populationInversionProxy: populationInversionProxy,
+            photonGenerationRate: photonGenerationRate,
+            latticeTotalPopulation: lattice.map { $0.upperPopulation + $0.lowerPopulation }.reduce(0, +),
+            latticeUpperPopulation: lattice.map(\.upperPopulation).reduce(0, +),
+            latticeLowerPopulation: lattice.map(\.lowerPopulation).reduce(0, +),
+            latticeExcitationFraction: lattice.map(\.excitation).reduce(0, +) / Double(max(1, lattice.count)),
+            simulatedDominantFrequencyHz: nil,
+            simulatedDominantWavelengthMeters: nil,
+            wavelengthClosenessPercent: nil
         )
 
-        // Use locals for initialization rather than capturing
-        // properties inside the map expression.
-
-        let photonCount =
-            parameters.photonCount
-
-        let cavityLength =
-            parameters.cavityLength
-
-        photonNodes =
-            (0..<photonCount).map {
-                id in
-
-                PhotonState(
-                    id: id,
-                    cavityLength: cavityLength
-                )
-            }
-
-        representativeZ = 0.0
-        previousZ = 0.0
-        representativeDirection = .forward
-
+        // ------------------------------------------------------------------
+        // 4. NOW it is safe to call instance methods
+        // ------------------------------------------------------------------
         updatePhotonPositions()
+        // (optional) updateMeasurements() if you want the measurement panel populated immediately
     }
 
-    deinit {
-        timer?.invalidate()
-    }
+    deinit { timer?.invalidate() }
 
-   
-    var lossReduction: Double {
-        qrtlState.lossReduction
-    }
+    // Convenience
+    var lossReduction: Double { qrtlState.lossReduction }
+    var beamAreaFactor: Double { qrtlState.beamAreaFactor }
+    var combinedGain: Double { qrtlState.combinedGain }
+    var beamLocked: Bool { qrtlState.resonanceLocked }
 
-    var beamAreaFactor: Double {
-        qrtlState.beamAreaFactor
-    }
-
-    var combinedGain: Double {
-        qrtlState.combinedGain
-    }
-
-    var beamLocked: Bool {
-        qrtlState.resonanceLocked
-    }
-
-    // MARK: Start
+    // MARK: - Start / Stop / Reset
 
     func start() {
-
         stop()
         resetState()
-
         isRunning = true
         lastTick = Date()
-
-        timer =
-            Timer.scheduledTimer(
-                withTimeInterval: 1.0 / 60.0,
-                repeats: true
-            ) { [weak self] _ in
-
-                self?.tick()
-            }
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
+            self?.tick()
+        }
     }
 
-    // MARK: Stop
-
     func stop() {
-
         timer?.invalidate()
         timer = nil
-
         isRunning = false
         lastTick = nil
     }
 
-    // MARK: Reset
-
     func reset() {
-
         stop()
         resetState()
     }
-    
-    // MARK: Update Measurement Pipeline
 
     func updateMeasurements() {
-
-        measurementState =
-            QRTLLaserMeasurementEngine.evaluate(
-                state: qrtlState,
-                parameters: parameters,
-                inputPowerWatts:
-                    measuredInputPowerWatts,
-                measuredOutputPowerWatts:
-                    measuredOutputPowerWatts,
-                measuredWavelengthMeters:
-                    measuredWavelengthMeters,
-                measuredThresholdInputPowerWatts:
-                    measuredThresholdInputPowerWatts,
-                measuredLinewidthHz:
-                    measuredLinewidthHz,
-                measuredStartupTimeSeconds:
-                    measuredStartupTimeSeconds,
-                measuredInputEnergyJoules:
-                    measuredInputEnergyJoules,
-                measuredOutputEnergyJoules:
-                    measuredOutputEnergyJoules,
-                experimentalRunCount:
-                    experimentalRunCount,
-                reproducibleRuns:
-                    reproducibleRuns
-            )
+        measurementState = QRTLLaserMeasurementEngine.evaluate(
+            state: qrtlState,
+            parameters: parameters,
+            inputPowerWatts: measuredInputPowerWatts,
+            measuredOutputPowerWatts: measuredOutputPowerWatts,
+            measuredWavelengthMeters: measuredWavelengthMeters,
+            measuredThresholdInputPowerWatts: measuredThresholdInputPowerWatts,
+            measuredLinewidthHz: measuredLinewidthHz,
+            measuredStartupTimeSeconds: measuredStartupTimeSeconds,
+            measuredInputEnergyJoules: measuredInputEnergyJoules,
+            measuredOutputEnergyJoules: measuredOutputEnergyJoules,
+            experimentalRunCount: experimentalRunCount,
+            reproducibleRuns: reproducibleRuns
+        )
     }
 
-    // MARK: Reset State
-
     private func resetState() {
-
         stateLock.lock()
+        defer { stateLock.unlock() }
 
-        defer {
-            stateLock.unlock()
-        }
-
-        phaseError =
-            parameters.initialPhaseError
-
-        phaseClosure =
-            QRTLLaserPhysics.phaseClosure(
-                phaseError: phaseError
-            )
-
-        resonanceResponse =
-            QRTLLaserPhysics.resonanceResponse(
-                phaseError: phaseError,
-                parameters: parameters
-            )
-
-        twistCurrent =
-            parameters.initialTwistCurrent
-
-        shellEnergy =
-            parameters.initialShellEnergy
-
-        coupling = 0.0
-
-        coherence =
-            parameters.initialCoherence
-
-        representativeZ = 0.0
-        previousZ = 0.0
-
-        representativeDirection =
-            .forward
-
+        phaseError = parameters.initialPhaseError
+        phaseClosure = QRTLLaserPhysics.phaseClosure(phaseError: phaseError)
+        resonanceResponse = QRTLLaserPhysics.resonanceResponse(
+            phaseError: phaseError, parameters: parameters
+        )
+        twistCurrent = parameters.initialTwistCurrent
+        shellEnergy = parameters.initialShellEnergy
+        coupling = 0
+        coherence = parameters.initialCoherence
+        representativeZ = 0
+        previousZ = 0
+        representativeDirection = .forward
         gainCrossingInProgress = false
         activeGainTraversalDirection = nil
-
         roundTripCount = 0
         gainMediumCrossings = 0
         stableLockRounds = 0
-
         resonanceLocked = false
-
         circulatingFieldFactor = 1.0
-        transmittedOutputFactor = 0.0
+        transmittedOutputFactor = 0
         outputEvents = 0
+        physicalPathDistance = 0
+        elapsedTime = 0
+        lattice = (0..<parameters.latticeSize).map { _ in CalciumCell.randomInitial() }
+        latticeSignal = []
+        lastFFTTime = 0
+        simulatedDominantFrequencyHz = nil
+        simulatedDominantWavelengthMeters = nil
+        wavelengthClosenessPercent = nil
 
-        physicalPathDistance = 0.0
-        elapsedTime = 0.0
+        let photonCount = parameters.photonCount
+        let cavityLength = parameters.cavityLength
+        photonNodes = (0..<photonCount).map { PhotonState(id: $0, cavityLength: cavityLength) }
 
-        let photonCount =
-            parameters.photonCount
-
-        let cavityLength =
-            parameters.cavityLength
-
-        photonNodes =
-            (0..<photonCount).map {
-                id in
-
-                PhotonState(
-                    id: id,
-                    cavityLength: cavityLength
-                )
-            }
-
-        qrtlState =
-            makeStateLocked()
-
+        recomputeCurrentProxies()
+        qrtlState = makeStateLocked()
         updateMeasurements()
         updatePhotonPositionsLocked()
     }
 
-    // MARK: Tick
+    // MARK: - Tick
 
     private func tick() {
-
         let now = Date()
-
         let dt: Double
-
         if let lastTick {
-
-            dt =
-                min(
-                    max(
-                        now.timeIntervalSince(lastTick),
-                        0.0
-                    ),
-                    0.10
-                )
-
+            dt = min(max(now.timeIntervalSince(lastTick), 0), 0.10)
         } else {
-
             dt = 1.0 / 60.0
         }
-
         lastTick = now
 
         stateLock.lock()
+        defer { stateLock.unlock() }
 
-        defer {
-            stateLock.unlock()
-        }
-
-        guard isRunning else {
-            return
-        }
+        guard isRunning else { return }
 
         elapsedTime += dt
-
-        // --------------------------------------------------------
-        // Safety timeout.
-        //
-        // This does NOT create resonance lock.
-        // --------------------------------------------------------
-
-        if elapsedTime >=
-            parameters.maximumSimulationDuration {
-
+        if elapsedTime >= parameters.maximumSimulationDuration {
             isRunning = false
-
             timer?.invalidate()
             timer = nil
-
             return
         }
 
-        propagateRepresentativeMode(
-            dt: dt
-        )
+        // 1. Evolve calcium lattice (pump + neighbor coupling + inversion)
+        evolveCalciumLattice(dt: dt)
 
-        advanceVisualMarkers(
-            dt: dt
-        )
+        // 2. Update current / rate proxies
+        recomputeCurrentProxies()
 
+        // 3. Record time-domain signal (mean excitation * cos(mean phase))
+        recordLatticeSignal()
+
+        // 4. Periodic FFT → dominant frequency / wavelength
+        if elapsedTime - lastFFTTime >= fftInterval {
+            performFFTAndUpdateWavelength()
+            lastFFTTime = elapsedTime
+        }
+
+        // 5. Propagate representative mode & visual markers
+        propagateRepresentativeMode(dt: dt)
+        advanceVisualMarkers(dt: dt)
         updatePhotonPositionsLocked()
 
-        updateMeasurements()
+        // 6. Continuous gain replenishment when inversion > 0 and mode close
+        applyStimulatedEmissionAndLosses(dt: dt)
 
+        updateMeasurements()
         updatePublishedStateLocked()
     }
 
-    // MARK: Representative Cavity Mode
+    // MARK: - Current → electrons → useful excitations
 
-    private func propagateRepresentativeMode(
-        dt: Double
-    ) {
+    private func recomputeCurrentProxies() {
+        excessCurrentAmps = max(0, parameters.driveCurrentAmps - parameters.thresholdCurrentAmps)
+        injectedElectronsPerSecond = excessCurrentAmps / parameters.electronCharge
+        usefulExcitationsPerSecond = injectedElectronsPerSecond * parameters.injectionEfficiency
+    }
 
-        previousZ =
-            representativeZ
+    // MARK: - Calcium lattice evolution
 
-        let visualSpeed =
-            parameters.cavityLength
-            /
-            parameters.visualOneWayDuration
+    private func evolveCalciumLattice(dt: Double) {
+        let size = parameters.latticeSize
+        let sigma = parameters.gaussianPumpSigmaCells
+        let neighborK = parameters.neighborCouplingStrength
 
-        switch representativeDirection {
+        // Total useful pump energy rate (J/s)
+        let pumpPowerWatts = usefulExcitationsPerSecond * parameters.photonEnergy
 
-        case .forward:
+        // Boost how much of that power actually drives the lattice
+        let pumpBoost: Double = 12.0          // ← turn this up/down (try 8–20)
 
-            let nextZ =
-                representativeZ
-                +
-                visualSpeed * dt
+        var newLattice = lattice
 
-            let distance =
-                max(
-                    0.0,
-                    min(
-                        nextZ,
-                        parameters.cavityLength
-                    )
-                    -
-                    representativeZ
+        for i in 0..<size {
+            let weight = QRTLLaserPhysics.gaussianPumpWeight(
+                cellIndex: i, size: size, sigma: sigma
+            )
+            // Normalize Gaussian so total weight ≈ 1
+            let norm = (0..<size).reduce(0.0) {
+                $0 + QRTLLaserPhysics.gaussianPumpWeight(cellIndex: $1, size: size, sigma: sigma)
+            }
+            let localPump = (weight / max(norm, 1e-12)) * pumpPowerWatts * dt
+
+            var cell = lattice[i]
+
+            // ---------- Stronger pump into the cell ----------
+            cell.localEnergy += localPump * pumpBoost
+            cell.excitation = QRTLLaserPhysics.clamp(
+                cell.excitation + (localPump * pumpBoost) / max(parameters.photonEnergy, 1e-30),
+                0, 1
+            )
+
+            // Neighbor energy exchange
+            let left  = lattice[(i - 1 + size) % size].localEnergy
+            let right = lattice[(i + 1) % size].localEnergy
+            let exchange = neighborK * (left + right - 2 * cell.localEnergy)
+            cell.localEnergy += exchange * dt
+            cell.localEnergy = max(0, cell.localEnergy)
+
+            // Phase & twist (driven by excitation)
+            let alignmentDrive = 0.25 * cell.excitation          // slightly stronger alignment
+            cell.phase += (cell.twist + alignmentDrive * sin(-cell.phase)) * dt
+            cell.twist += (-0.35 * cell.twist + 0.15 * cell.excitation * cos(cell.phase)) * dt
+
+            // Displacement / strain
+            cell.displacement += cell.twist * dt
+            cell.strain = cell.displacement * 0.05
+
+            // Reduced damping so energy stays longer
+            cell.damping = parameters.latticeDampingBase * 0.4 + 0.005 * cell.excitation
+            cell.localEnergy *= (1.0 - cell.damping * dt)
+            cell.excitation  *= (1.0 - 0.3 * cell.damping * dt)
+
+            // ---------- Much stronger population inversion drive ----------
+            let pumpFactor = min(1.0, cell.excitation * 3.0)
+            cell.upperPopulation = QRTLLaserPhysics.clamp(
+                cell.upperPopulation + (0.75 * pumpFactor - 0.04) * dt * 6.0,
+                0.0, 1.0
+            )
+            cell.lowerPopulation = 1.0 - cell.upperPopulation
+
+            newLattice[i] = cell
+        }
+        lattice = newLattice
+
+        // ---------- Collective quantities ----------
+        var sumCos = 0.0, sumSin = 0.0, sumExc = 0.0
+        var sumUpper = 0.0, sumLower = 0.0
+        for cell in lattice {
+            sumCos += cos(cell.phase) * cell.excitation
+            sumSin += sin(cell.phase) * cell.excitation
+            sumExc += cell.excitation
+            sumUpper += cell.upperPopulation
+            sumLower += cell.lowerPopulation
+        }
+        let n = Double(size)
+        let R = sqrt(sumCos * sumCos + sumSin * sumSin) / max(sumExc, 1e-12)
+        let latticeCoherence = QRTLLaserPhysics.clamp(R, 0, 1)
+
+        // Blend lattice coherence into global coherence
+        coherence = 0.55 * coherence + 0.45 * (
+            parameters.initialCoherence
+            + (parameters.maximumCoherence - parameters.initialCoherence) * latticeCoherence
+        )
+
+        // Energy localization
+        let meanEnergy = lattice.map(\.localEnergy).reduce(0, +) / n
+        let variance = lattice.map { pow($0.localEnergy - meanEnergy, 2) }.reduce(0, +) / n
+        let localization = 1.0 / (1.0 + variance * 8)
+
+        // QRTL → EM coupling proxy
+        qrtlToEMCouplingProxy = QRTLLaserPhysics.clamp(
+            latticeCoherence * localization * max(coupling, 0.1), 0, 1
+        )
+
+        // Population inversion proxy
+        let totalPop = sumUpper + sumLower
+        populationInversionProxy = totalPop > 0 ? (sumUpper - sumLower) / totalPop : 0
+
+        // Photon generation rate
+        let inversionFactor = max(0, populationInversionProxy)
+        photonGenerationRate =
+            usefulExcitationsPerSecond
+            * latticeCoherence
+            * qrtlToEMCouplingProxy
+            * inversionFactor
+            * 0.25          // slightly higher scale factor
+    }
+
+    // MARK: - Time-domain signal & FFT
+
+    private func recordLatticeSignal() {
+        let meanPhase = lattice.map(\.phase).reduce(0, +) / Double(lattice.count)
+        let meanExc = lattice.map(\.excitation).reduce(0, +) / Double(lattice.count)
+        let sample = meanExc * cos(meanPhase)
+        latticeSignal.append(sample)
+        if latticeSignal.count > signalCapacity {
+            latticeSignal.removeFirst(latticeSignal.count - signalCapacity)
+        }
+    }
+
+    private func performFFTAndUpdateWavelength() {
+        let n = latticeSignal.count
+        guard n >= 64 else { return }
+
+        // Next lower power-of-two length
+        let log2n = Int(floor(log2(Double(n))))
+        let N = 1 << log2n
+        guard N >= 64 else { return }
+
+        // Copy the most recent N samples
+        var input = [Float](latticeSignal.suffix(N).map { Float($0) })
+
+        // Hann window
+        for i in 0..<N {
+            let w = 0.5 * (1.0 - cos(2.0 * Float.pi * Float(i) / Float(N - 1)))
+            input[i] *= w
+        }
+
+        // Real FFT setup
+        guard let setup = vDSP_create_fftsetup(vDSP_Length(log2n), FFTRadix(kFFTRadix2)) else {
+            return
+        }
+        defer { vDSP_destroy_fftsetup(setup) }
+
+        var realp = [Float](repeating: 0, count: N / 2)
+        var imagp = [Float](repeating: 0, count: N / 2)
+
+        realp.withUnsafeMutableBufferPointer { realBuf in
+            imagp.withUnsafeMutableBufferPointer { imagBuf in
+                var splitComplex = DSPSplitComplex(
+                    realp: realBuf.baseAddress!,
+                    imagp: imagBuf.baseAddress!
                 )
 
+                // Pack real input into split-complex format required by vDSP
+                input.withUnsafeMutableBufferPointer { inputBuf in
+                    inputBuf.baseAddress!.withMemoryRebound(to: DSPComplex.self, capacity: N / 2) { complexPtr in
+                        vDSP_ctoz(complexPtr, 2, &splitComplex, 1, vDSP_Length(N / 2))
+                    }
+                }
+
+                // Forward real FFT
+                vDSP_fft_zrip(setup, &splitComplex, 1, vDSP_Length(log2n),
+                              FFTDirection(FFT_FORWARD))
+
+                // Magnitudes
+                var magnitudes = [Float](repeating: 0, count: N / 2)
+                vDSP_zvmags(&splitComplex, 1, &magnitudes, 1, vDSP_Length(N / 2))
+
+                // Find peak bin (skip DC)
+                var maxMag: Float = 0
+                var maxIdx: vDSP_Length = 0
+                magnitudes.withUnsafeBufferPointer { magBuf in
+                    // Search from index 1 onward
+                    vDSP_maxvi(magBuf.baseAddress! + 1, 1,
+                               &maxMag, &maxIdx,
+                               vDSP_Length(N / 2 - 1))
+                }
+                // maxIdx is relative to the +1 offset
+                let peakBin = Int(maxIdx) + 1
+
+                // Approximate sample rate (one sample per visual frame ≈ 60 Hz)
+                let sampleRate: Double = 60.0
+                let dominantFreq = Double(peakBin) * sampleRate / Double(N)
+
+                // Map lattice tone onto optical carrier (phenomenological)
+                let opticalFreq = parameters.targetFrequency + (dominantFreq - 5.0) * 1e9
+                let wavelength = parameters.speedOfLight / max(opticalFreq, 1.0)
+
+                simulatedDominantFrequencyHz = opticalFreq
+                simulatedDominantWavelengthMeters = wavelength
+
+                let closeness = 100.0 * (1.0 - abs(wavelength - parameters.targetWavelengthMeters)
+                                             / parameters.targetWavelengthMeters)
+                wavelengthClosenessPercent = QRTLLaserPhysics.clamp(closeness, 0, 100)
+            }
+        }
+    }
+
+    // MARK: - Stimulated emission + cavity loss (continuous)
+
+    private func applyStimulatedEmissionAndLosses(dt: Double) {
+        let modeCloseEnough = (wavelengthClosenessPercent ?? 0) >=
+            (100 - parameters.wavelengthClosenessTolerancePercent)
+        let inversionOK = populationInversionProxy > parameters.inversionThresholdForLasing
+
+        guard modeCloseEnough && inversionOK else {
+            // Below threshold: only weak spontaneous contribution, no stable beam
+            return
+        }
+
+        // Gain from stimulated emission (photons added to circulating field)
+        let gainRate = photonGenerationRate * parameters.photonEnergy   // watts proxy
+        let addedField = gainRate * dt / max(parameters.photonEnergy, 1e-30) * 1e-18  // scale
+        circulatingFieldFactor += addedField
+
+        // Continuous losses (mirror, absorption, scattering) – output coupler handled at end mirror
+        let lossPerSecond = parameters.absorptionLoss + parameters.scatteringLoss
+        circulatingFieldFactor *= exp(-lossPerSecond * dt)
+        circulatingFieldFactor = max(0, circulatingFieldFactor)
+    }
+
+    // MARK: - Representative mode propagation (unchanged structure)
+
+    private func propagateRepresentativeMode(dt: Double) {
+        previousZ = representativeZ
+        let visualSpeed = parameters.cavityLength / parameters.visualOneWayDuration
+
+        switch representativeDirection {
+        case .forward:
+            let nextZ = representativeZ + visualSpeed * dt
+            let distance = max(0, min(nextZ, parameters.cavityLength) - representativeZ)
             physicalPathDistance += distance
-
             representativeZ = nextZ
-
-            if representativeZ >=
-                parameters.cavityLength {
-
-                representativeZ =
-                    parameters.cavityLength
-
+            if representativeZ >= parameters.cavityLength {
+                representativeZ = parameters.cavityLength
                 processOutputCoupler()
-
-                // The surviving circulating component is
-                // reflected back toward the gain medium.
-
-                representativeDirection =
-                    .returnPath
-
+                representativeDirection = .returnPath
                 gainCrossingInProgress = false
                 activeGainTraversalDirection = nil
             }
-
         case .returnPath:
-
-            let nextZ =
-                representativeZ
-                -
-                visualSpeed * dt
-
-            let distance =
-                max(
-                    0.0,
-                    representativeZ
-                    -
-                    max(
-                        nextZ,
-                        0.0
-                    )
-                )
-
+            let nextZ = representativeZ - visualSpeed * dt
+            let distance = max(0, representativeZ - max(nextZ, 0))
             physicalPathDistance += distance
-
             representativeZ = nextZ
-
-            if representativeZ <= 0.0 {
-
-                representativeZ = 0.0
-
-                // Rear mirror is fully reflective.
-
-                representativeDirection =
-                    .forward
-
+            if representativeZ <= 0 {
+                representativeZ = 0
+                representativeDirection = .forward
                 gainCrossingInProgress = false
                 activeGainTraversalDirection = nil
-
                 completeRoundTrip()
             }
         }
-
         detectGainMediumCrossing()
     }
 
-    // MARK: Gain Medium Crossing
-
     private func detectGainMediumCrossing() {
-
-        let z =
-            representativeZ
-
-        let insideGain =
-            z >= parameters.gainStartZ
-            &&
-            z <= parameters.gainEndZ
-
+        let z = representativeZ
+        let insideGain = z >= parameters.gainStartZ && z <= parameters.gainEndZ
         if insideGain {
-
-            if !gainCrossingInProgress
-                ||
-                activeGainTraversalDirection
-                    != representativeDirection {
-
+            if !gainCrossingInProgress || activeGainTraversalDirection != representativeDirection {
                 gainCrossingInProgress = true
-
-                activeGainTraversalDirection =
-                    representativeDirection
-
-                processGainMediumTraversal(
-                    direction: representativeDirection
-                )
+                activeGainTraversalDirection = representativeDirection
+                processGainMediumTraversal(direction: representativeDirection)
             }
-
         } else {
-
             gainCrossingInProgress = false
             activeGainTraversalDirection = nil
         }
     }
 
-    // MARK: QRTL Gain-Medium Interaction
-
-    private func processGainMediumTraversal(
-        direction: CavityDirection
-    ) {
-
+    private func processGainMediumTraversal(direction: CavityDirection) {
         gainMediumCrossings += 1
 
-        // --------------------------------------------------------
-        // 1. Current phase closure
-        // --------------------------------------------------------
+        phaseClosure = QRTLLaserPhysics.phaseClosure(phaseError: phaseError)
+        resonanceResponse = QRTLLaserPhysics.resonanceResponse(
+            phaseError: phaseError, parameters: parameters
+        )
+        let normalizedTwist = QRTLLaserPhysics.clamp(
+            twistCurrent / parameters.targetTwistCurrent, 0, 1
+        )
+        shellEnergy = QRTLLaserPhysics.shellEnergy(
+            resonanceResponse: resonanceResponse,
+            normalizedTwistCurrent: normalizedTwist,
+            parameters: parameters
+        )
+        coupling = QRTLLaserPhysics.qrtlCoupling(
+            oldCoupling: coupling,
+            phaseClosure: phaseClosure,
+            resonanceResponse: resonanceResponse,
+            shellEnergy: shellEnergy,
+            parameters: parameters
+        )
+        // Coherence already blended with lattice; keep a mild update
+        coherence = QRTLLaserPhysics.coherence(coupling: coupling, parameters: parameters)
+        twistCurrent = QRTLLaserPhysics.twistCurrent(
+            oldCurrent: twistCurrent,
+            phaseClosure: phaseClosure,
+            coupling: coupling,
+            parameters: parameters
+        )
 
-        phaseClosure =
-            QRTLLaserPhysics.phaseClosure(
-                phaseError: phaseError
-            )
+        let phaseCorrection = parameters.phaseCorrectionBase
+            + parameters.phaseCorrectionClosureWeight * phaseClosure
+            + parameters.phaseCorrectionCouplingWeight * coupling
+        let bounded = QRTLLaserPhysics.clamp(phaseCorrection, 0, 0.50)
+        phaseError *= (1.0 - bounded)
+        phaseError = max(0, phaseError)
 
-        // --------------------------------------------------------
-        // 2. Current resonance response
-        // --------------------------------------------------------
+        // Re-evaluate
+        phaseClosure = QRTLLaserPhysics.phaseClosure(phaseError: phaseError)
+        resonanceResponse = QRTLLaserPhysics.resonanceResponse(
+            phaseError: phaseError, parameters: parameters
+        )
+        let updatedNormTwist = QRTLLaserPhysics.clamp(
+            twistCurrent / parameters.targetTwistCurrent, 0, 1
+        )
+        shellEnergy = QRTLLaserPhysics.shellEnergy(
+            resonanceResponse: resonanceResponse,
+            normalizedTwistCurrent: updatedNormTwist,
+            parameters: parameters
+        )
+        coupling = QRTLLaserPhysics.qrtlCoupling(
+            oldCoupling: coupling,
+            phaseClosure: phaseClosure,
+            resonanceResponse: resonanceResponse,
+            shellEnergy: shellEnergy,
+            parameters: parameters
+        )
+        coherence = QRTLLaserPhysics.coherence(coupling: coupling, parameters: parameters)
 
-        resonanceResponse =
-            QRTLLaserPhysics.resonanceResponse(
-                phaseError: phaseError,
-                parameters: parameters
-            )
+        let lossReduction = QRTLLaserPhysics.lossReduction(coupling: coupling, parameters: parameters)
+        let beamAreaFactor = QRTLLaserPhysics.beamAreaFactor(coupling: coupling, parameters: parameters)
+        let coherenceGain = coherence / max(parameters.initialCoherence, 1e-12)
+        let lossGain = 1.0 + lossReduction
+        let concentrationGain = 1.0 / max(beamAreaFactor, 1e-12)
+        let combinedGain = coherenceGain * lossGain * concentrationGain
 
-        // --------------------------------------------------------
-        // 3. Current shell energy
-        // --------------------------------------------------------
-
-        let normalizedTwist =
-            QRTLLaserPhysics.clamp(
-                twistCurrent
-                /
-                parameters.targetTwistCurrent,
-                0.0,
-                1.0
-            )
-
-        shellEnergy =
-            QRTLLaserPhysics.shellEnergy(
-                resonanceResponse:
-                    resonanceResponse,
-                normalizedTwistCurrent:
-                    normalizedTwist,
-                parameters:
-                    parameters
-            )
-
-        // --------------------------------------------------------
-        // 4. QRTL coupling progression
-        //
-        // Unlike the old multiplicative bootstrap, this is an
-        // iterative state update.
-        // --------------------------------------------------------
-
-        coupling =
-            QRTLLaserPhysics.qrtlCoupling(
-                oldCoupling: coupling,
-                phaseClosure: phaseClosure,
-                resonanceResponse:
-                    resonanceResponse,
-                shellEnergy: shellEnergy,
-                parameters: parameters
-            )
-
-        // --------------------------------------------------------
-        // 5. Coherence
-        // --------------------------------------------------------
-
-        coherence =
-            QRTLLaserPhysics.coherence(
-                coupling: coupling,
-                parameters: parameters
-            )
-
-        // --------------------------------------------------------
-        // 6. Twist current
-        // --------------------------------------------------------
-
-        twistCurrent =
-            QRTLLaserPhysics.twistCurrent(
-                oldCurrent:
-                    twistCurrent,
-                phaseClosure:
-                    phaseClosure,
-                coupling:
-                    coupling,
-                parameters:
-                    parameters
-            )
-
-        // --------------------------------------------------------
-        // 7. Phase convergence
-        //
-        // The correction contains:
-        //
-        // - a bounded baseline convergence term
-        // - phase-closure contribution
-        // - QRTL coupling contribution
-        //
-        // This creates an actual convergence path rather than
-        // requiring coupling to become high before phase can move.
-        // --------------------------------------------------------
-
-        let phaseCorrection =
-            parameters.phaseCorrectionBase
-            +
-            parameters.phaseCorrectionClosureWeight
-            * phaseClosure
-            +
-            parameters.phaseCorrectionCouplingWeight
-            * coupling
-
-        let boundedPhaseCorrection =
-            QRTLLaserPhysics.clamp(
-                phaseCorrection,
-                0.0,
-                0.50
-            )
-
-        phaseError *=
-            (
-                1.0
-                -
-                boundedPhaseCorrection
-            )
-
-        phaseError =
-            max(
-                0.0,
-                phaseError
-            )
-
-        // --------------------------------------------------------
-        // 8. Re-evaluate complete post-interaction QRTL state.
-        // --------------------------------------------------------
-
-        phaseClosure =
-            QRTLLaserPhysics.phaseClosure(
-                phaseError: phaseError
-            )
-
-        resonanceResponse =
-            QRTLLaserPhysics.resonanceResponse(
-                phaseError: phaseError,
-                parameters: parameters
-            )
-
-        let updatedNormalizedTwist =
-            QRTLLaserPhysics.clamp(
-                twistCurrent
-                /
-                parameters.targetTwistCurrent,
-                0.0,
-                1.0
-            )
-
-        shellEnergy =
-            QRTLLaserPhysics.shellEnergy(
-                resonanceResponse:
-                    resonanceResponse,
-                normalizedTwistCurrent:
-                    updatedNormalizedTwist,
-                parameters:
-                    parameters
-            )
-
-        // Important:
-        // Coupling is updated again from the post-interaction
-        // state so that the pipeline is continuous.
-
-        coupling =
-            QRTLLaserPhysics.qrtlCoupling(
-                oldCoupling:
-                    coupling,
-                phaseClosure:
-                    phaseClosure,
-                resonanceResponse:
-                    resonanceResponse,
-                shellEnergy:
-                    shellEnergy,
-                parameters:
-                    parameters
-            )
-
-        coherence =
-            QRTLLaserPhysics.coherence(
-                coupling:
-                    coupling,
-                parameters:
-                    parameters
-            )
-
-        let lossReduction =
-            QRTLLaserPhysics.lossReduction(
-                coupling:
-                    coupling,
-                parameters:
-                    parameters
-            )
-
-        let beamAreaFactor =
-            QRTLLaserPhysics.beamAreaFactor(
-                coupling:
-                    coupling,
-                parameters:
-                    parameters
-            )
-
-        // --------------------------------------------------------
-        // 9. Amplification/model metrics
-        // --------------------------------------------------------
-
-        let coherenceGain =
-            coherence
-            /
-            max(
-                parameters.initialCoherence,
-                1.0e-12
-            )
-
-        let lossGain =
-            1.0
-            +
-            lossReduction
-
-        let concentrationGain =
-            1.0
-            /
-            max(
-                beamAreaFactor,
-                1.0e-12
-            )
-
-        let combinedGain =
-            coherenceGain
-            *
-            lossGain
-            *
-            concentrationGain
-
-        qrtlState =
-            QRTLState(
-                phaseError:
-                    phaseError,
-                phaseClosure:
-                    phaseClosure,
-                twistCurrent:
-                    twistCurrent,
-                resonanceResponse:
-                    resonanceResponse,
-                shellEnergy:
-                    shellEnergy,
-                coupling:
-                    coupling,
-                coherence:
-                    coherence,
-                lossReduction:
-                    lossReduction,
-                beamAreaFactor:
-                    beamAreaFactor,
-                coherenceGain:
-                    coherenceGain,
-                lossGain:
-                    lossGain,
-                concentrationGain:
-                    concentrationGain,
-                combinedGain:
-                    combinedGain,
-                roundTripCount:
-                    roundTripCount,
-                gainMediumCrossings:
-                    gainMediumCrossings,
-                stableLockRounds:
-                    stableLockRounds,
-                resonanceLocked:
-                    resonanceLocked,
-                circulatingFieldFactor:
-                    circulatingFieldFactor,
-                transmittedOutputFactor:
-                    transmittedOutputFactor,
-                outputEvents:
-                    outputEvents,
-                outputEnabled:
-                    resonanceLocked
-                    &&
-                    transmittedOutputFactor > 0.0,
-                currentDirection:
-                    direction,
-                physicalElapsedTime:
-                    physicalPathDistance
-                    /
-                    parameters.speedOfLight
-            )
+        qrtlState = QRTLState(
+            phaseError: phaseError,
+            phaseClosure: phaseClosure,
+            twistCurrent: twistCurrent,
+            resonanceResponse: resonanceResponse,
+            shellEnergy: shellEnergy,
+            coupling: coupling,
+            coherence: coherence,
+            lossReduction: lossReduction,
+            beamAreaFactor: beamAreaFactor,
+            coherenceGain: coherenceGain,
+            lossGain: lossGain,
+            concentrationGain: concentrationGain,
+            combinedGain: combinedGain,
+            roundTripCount: roundTripCount,
+            gainMediumCrossings: gainMediumCrossings,
+            stableLockRounds: stableLockRounds,
+            resonanceLocked: resonanceLocked,
+            circulatingFieldFactor: circulatingFieldFactor,
+            transmittedOutputFactor: transmittedOutputFactor,
+            outputEvents: outputEvents,
+            outputEnabled: resonanceLocked && transmittedOutputFactor > 0,
+            currentDirection: direction,
+            physicalElapsedTime: physicalPathDistance / parameters.speedOfLight,
+            driveCurrentAmps: parameters.driveCurrentAmps,
+            thresholdCurrentAmps: parameters.thresholdCurrentAmps,
+            excessCurrentAmps: excessCurrentAmps,
+            injectedElectronsPerSecond: injectedElectronsPerSecond,
+            usefulExcitationsPerSecond: usefulExcitationsPerSecond,
+            qrtlToEMCouplingProxy: qrtlToEMCouplingProxy,
+            populationInversionProxy: populationInversionProxy,
+            photonGenerationRate: photonGenerationRate,
+            latticeTotalPopulation: lattice.map { $0.upperPopulation + $0.lowerPopulation }.reduce(0, +),
+            latticeUpperPopulation: lattice.map(\.upperPopulation).reduce(0, +),
+            latticeLowerPopulation: lattice.map(\.lowerPopulation).reduce(0, +),
+            latticeExcitationFraction: lattice.map(\.excitation).reduce(0, +) / Double(lattice.count),
+            simulatedDominantFrequencyHz: simulatedDominantFrequencyHz,
+            simulatedDominantWavelengthMeters: simulatedDominantWavelengthMeters,
+            wavelengthClosenessPercent: wavelengthClosenessPercent
+        )
     }
 
-    // MARK: Output Coupler
-
     private func processOutputCoupler() {
-
-        // --------------------------------------------------------
-        // Before lock:
-        //
-        // No modeled output is transmitted.
-        // The entire circulating field remains in the cavity.
-        // --------------------------------------------------------
-
         guard resonanceLocked else {
-
-            transmittedOutputFactor = 0.0
+            transmittedOutputFactor = 0
+            return
+        }
+        // Only extract when inversion is positive and mode is close (threshold condition)
+        let modeOK = (wavelengthClosenessPercent ?? 0) >=
+            (100 - parameters.wavelengthClosenessTolerancePercent)
+        let invOK = populationInversionProxy > parameters.inversionThresholdForLasing
+        guard modeOK && invOK else {
+            transmittedOutputFactor = 0
             return
         }
 
-        // --------------------------------------------------------
-        // Actual modeled output-coupler event.
-        //
-        // 10% transmitted
-        // 90% reflected
-        //
-        // The transmitted component becomes the authoritative
-        // output state.
-        // --------------------------------------------------------
-
-        let incidentField =
-            circulatingFieldFactor
-
-        let transmitted =
-            incidentField
-            *
-            parameters.outputTransmission
-
-        let reflected =
-            incidentField
-            *
-            parameters.outputReflection
-
-        transmittedOutputFactor =
-            transmitted
-
-        circulatingFieldFactor =
-            reflected
-
+        let incident = circulatingFieldFactor
+        let transmitted = incident * parameters.outputTransmission
+        let reflected = incident * parameters.outputReflection
+        transmittedOutputFactor = transmitted
+        circulatingFieldFactor = reflected
         outputEvents += 1
     }
 
-    // MARK: Complete Round Trip
-
     private func completeRoundTrip() {
-
         roundTripCount += 1
+        let lockOK =
+            qrtlState.phaseClosure >= parameters.phaseClosureLockThreshold
+            && abs(qrtlState.phaseError) <= parameters.maximumPhaseErrorForLock
+            && qrtlState.coupling >= parameters.qrtlCouplingLockThreshold
+            && qrtlState.coherence >= parameters.coherenceLockThreshold
+            && (wavelengthClosenessPercent ?? 0) >= (100 - parameters.wavelengthClosenessTolerancePercent)
+            && populationInversionProxy > parameters.inversionThresholdForLasing
 
-        // --------------------------------------------------------
-        // Evaluate the four required lock conditions.
-        // --------------------------------------------------------
-
-        let lockCriteriaSatisfied =
-            qrtlState.phaseClosure
-                >=
-                parameters.phaseClosureLockThreshold
-
-            &&
-
-            abs(
-                qrtlState.phaseError
-            )
-                <=
-                parameters.maximumPhaseErrorForLock
-
-            &&
-
-            qrtlState.coupling
-                >=
-                parameters.qrtlCouplingLockThreshold
-
-            &&
-
-            qrtlState.coherence
-                >=
-                parameters.coherenceLockThreshold
-
-        if lockCriteriaSatisfied {
-
+        if lockOK {
             stableLockRounds += 1
-
         } else {
-
             stableLockRounds = 0
         }
-
-        // --------------------------------------------------------
-        // The ONLY lock trigger.
-        //
-        // No timer, output event, or visual state can create lock.
-        // --------------------------------------------------------
-
-        if stableLockRounds
-            >=
-            parameters.requiredStableLockRounds {
-
+        if stableLockRounds >= parameters.requiredStableLockRounds {
             resonanceLocked = true
         }
-
         updatePublishedStateLocked()
     }
 
-    // MARK: Visual Photon Markers
+    // MARK: - Visual markers (unchanged)
 
-    private func advanceVisualMarkers(
-        dt: Double
-    ) {
-
-        let visualSpeed =
-            parameters.cavityLength
-            /
-            parameters.visualOneWayDuration
-
+    private func advanceVisualMarkers(dt: Double) {
+        let visualSpeed = parameters.cavityLength / parameters.visualOneWayDuration
         for index in photonNodes.indices {
-
             switch photonNodes[index].direction {
-
             case .forward:
-
-                photonNodes[index].z +=
-                    visualSpeed * dt
-
-                if photonNodes[index].z
-                    >=
-                    parameters.cavityLength {
-
-                    photonNodes[index].z =
-                        parameters.cavityLength
-
-                    photonNodes[index].direction =
-                        .returnPath
-
-                    photonNodes[index]
-                        .hasEnteredGainThisTraversal =
-                        false
+                photonNodes[index].z += visualSpeed * dt
+                if photonNodes[index].z >= parameters.cavityLength {
+                    photonNodes[index].z = parameters.cavityLength
+                    photonNodes[index].direction = .returnPath
+                    photonNodes[index].hasEnteredGainThisTraversal = false
                 }
-
             case .returnPath:
-
-                photonNodes[index].z -=
-                    visualSpeed * dt
-
-                if photonNodes[index].z <= 0.0 {
-
-                    photonNodes[index].z = 0.0
-
-                    photonNodes[index].direction =
-                        .forward
-
-                    photonNodes[index]
-                        .hasEnteredGainThisTraversal =
-                        false
+                photonNodes[index].z -= visualSpeed * dt
+                if photonNodes[index].z <= 0 {
+                    photonNodes[index].z = 0
+                    photonNodes[index].direction = .forward
+                    photonNodes[index].hasEnteredGainThisTraversal = false
                 }
             }
         }
     }
 
-    // MARK: Photon Position Update
-
     private func updatePhotonPositions() {
-
         stateLock.lock()
-
-        defer {
-            stateLock.unlock()
-        }
-
+        defer { stateLock.unlock() }
         updatePhotonPositionsLocked()
     }
 
     private func updatePhotonPositionsLocked() {
-
         for index in photonNodes.indices {
-
-            photonNodes[index]
-                .updateVisualPosition(
-                    coherence:
-                        qrtlState.coherence
-                )
+            photonNodes[index].updateVisualPosition(coherence: qrtlState.coherence)
         }
     }
 
-    // MARK: State Construction
+    // MARK: - State construction
 
-    private func makeStateLocked()
-        -> QRTLState {
+    private func makeInitialState() -> QRTLState {
+        makeStateLocked()
+    }
 
-        let lossReduction =
-            QRTLLaserPhysics.lossReduction(
-                coupling:
-                    coupling,
-                parameters:
-                    parameters
-            )
-
-        let beamAreaFactor =
-            QRTLLaserPhysics.beamAreaFactor(
-                coupling:
-                    coupling,
-                parameters:
-                    parameters
-            )
-
-        let coherenceGain =
-            coherence
-            /
-            max(
-                parameters.initialCoherence,
-                1.0e-12
-            )
-
-        let lossGain =
-            1.0
-            +
-            lossReduction
-
-        let concentrationGain =
-            1.0
-            /
-            max(
-                beamAreaFactor,
-                1.0e-12
-            )
-
-        let combinedGain =
-            coherenceGain
-            *
-            lossGain
-            *
-            concentrationGain
+    private func makeStateLocked() -> QRTLState {
+        let lossReduction = QRTLLaserPhysics.lossReduction(coupling: coupling, parameters: parameters)
+        let beamAreaFactor = QRTLLaserPhysics.beamAreaFactor(coupling: coupling, parameters: parameters)
+        let coherenceGain = coherence / max(parameters.initialCoherence, 1e-12)
+        let lossGain = 1.0 + lossReduction
+        let concentrationGain = 1.0 / max(beamAreaFactor, 1e-12)
+        let combinedGain = coherenceGain * lossGain * concentrationGain
 
         return QRTLState(
-            phaseError:
-                phaseError,
-            phaseClosure:
-                phaseClosure,
-            twistCurrent:
-                twistCurrent,
-            resonanceResponse:
-                resonanceResponse,
-            shellEnergy:
-                shellEnergy,
-            coupling:
-                coupling,
-            coherence:
-                coherence,
-            lossReduction:
-                lossReduction,
-            beamAreaFactor:
-                beamAreaFactor,
-            coherenceGain:
-                coherenceGain,
-            lossGain:
-                lossGain,
-            concentrationGain:
-                concentrationGain,
-            combinedGain:
-                combinedGain,
-            roundTripCount:
-                roundTripCount,
-            gainMediumCrossings:
-                gainMediumCrossings,
-            stableLockRounds:
-                stableLockRounds,
-            resonanceLocked:
-                resonanceLocked,
-            circulatingFieldFactor:
-                circulatingFieldFactor,
-            transmittedOutputFactor:
-                transmittedOutputFactor,
-            outputEvents:
-                outputEvents,
-            outputEnabled:
-                resonanceLocked
-                &&
-                transmittedOutputFactor > 0.0,
-            currentDirection:
-                representativeDirection,
-            physicalElapsedTime:
-                physicalPathDistance
-                /
-                parameters.speedOfLight
+            phaseError: phaseError,
+            phaseClosure: phaseClosure,
+            twistCurrent: twistCurrent,
+            resonanceResponse: resonanceResponse,
+            shellEnergy: shellEnergy,
+            coupling: coupling,
+            coherence: coherence,
+            lossReduction: lossReduction,
+            beamAreaFactor: beamAreaFactor,
+            coherenceGain: coherenceGain,
+            lossGain: lossGain,
+            concentrationGain: concentrationGain,
+            combinedGain: combinedGain,
+            roundTripCount: roundTripCount,
+            gainMediumCrossings: gainMediumCrossings,
+            stableLockRounds: stableLockRounds,
+            resonanceLocked: resonanceLocked,
+            circulatingFieldFactor: circulatingFieldFactor,
+            transmittedOutputFactor: transmittedOutputFactor,
+            outputEvents: outputEvents,
+            outputEnabled: resonanceLocked && transmittedOutputFactor > 0,
+            currentDirection: representativeDirection,
+            physicalElapsedTime: physicalPathDistance / parameters.speedOfLight,
+            driveCurrentAmps: parameters.driveCurrentAmps,
+            thresholdCurrentAmps: parameters.thresholdCurrentAmps,
+            excessCurrentAmps: excessCurrentAmps,
+            injectedElectronsPerSecond: injectedElectronsPerSecond,
+            usefulExcitationsPerSecond: usefulExcitationsPerSecond,
+            qrtlToEMCouplingProxy: qrtlToEMCouplingProxy,
+            populationInversionProxy: populationInversionProxy,
+            photonGenerationRate: photonGenerationRate,
+            latticeTotalPopulation: lattice.map { $0.upperPopulation + $0.lowerPopulation }.reduce(0, +),
+            latticeUpperPopulation: lattice.map(\.upperPopulation).reduce(0, +),
+            latticeLowerPopulation: lattice.map(\.lowerPopulation).reduce(0, +),
+            latticeExcitationFraction: lattice.map(\.excitation).reduce(0, +) / Double(max(1, lattice.count)),
+            simulatedDominantFrequencyHz: simulatedDominantFrequencyHz,
+            simulatedDominantWavelengthMeters: simulatedDominantWavelengthMeters,
+            wavelengthClosenessPercent: wavelengthClosenessPercent
         )
     }
 
     private func updatePublishedStateLocked() {
-
-        qrtlState =
-            makeStateLocked()
+        qrtlState = makeStateLocked()
     }
 
-    // MARK: Thread-safe Snapshot
-
-    func snapshot() -> (
-        state: QRTLState,
-        photons: [PhotonState],
-        running: Bool,
-        elapsed: Double
-    ) {
-
+    func snapshot() -> (state: QRTLState, photons: [PhotonState], running: Bool, elapsed: Double) {
         stateLock.lock()
-
-        defer {
-            stateLock.unlock()
-        }
-
-        return (
-            qrtlState,
-            photonNodes,
-            isRunning,
-            elapsedTime
-        )
+        defer { stateLock.unlock() }
+        return (qrtlState, photonNodes, isRunning, elapsedTime)
     }
 }
 
-// MARK: - SceneKit View
+// MARK: - SceneKit View (unchanged except minor opacity driven by new state)
 
 struct QRTLLaserSceneView: UIViewRepresentable {
-
     @ObservedObject var monitor: MasterMonitor
 
-    func makeCoordinator() -> Coordinator {
-        Coordinator()
-    }
+    func makeCoordinator() -> Coordinator { Coordinator() }
 
-    func makeUIView(
-        context: Context
-    ) -> SCNView {
-
+    func makeUIView(context: Context) -> SCNView {
         let view = SCNView()
-
-        view.backgroundColor =
-            UIColor(
-                red: 0.015,
-                green: 0.02,
-                blue: 0.035,
-                alpha: 1.0
-            )
-
-        view.scene =
-            makeScene()
-
-        view.allowsCameraControl =
-            true
-
-        view.autoenablesDefaultLighting =
-            false
-
-        view.antialiasingMode =
-            .multisampling4X
-
-        context.coordinator.monitor =
-            monitor
-
-        context.coordinator.view =
-            view
-
+        view.backgroundColor = UIColor(red: 0.015, green: 0.02, blue: 0.035, alpha: 1)
+        view.scene = makeScene()
+        view.allowsCameraControl = true
+        view.autoenablesDefaultLighting = false
+        view.antialiasingMode = .multisampling4X
+        context.coordinator.monitor = monitor
+        context.coordinator.view = view
         return view
     }
 
-    func updateUIView(
-        _ view: SCNView,
-        context: Context
-    ) {
-
-        context.coordinator.monitor =
-            monitor
-
+    func updateUIView(_ view: SCNView, context: Context) {
+        context.coordinator.monitor = monitor
         context.coordinator.updateScene()
     }
 
-    // MARK: Scene
-
-    private func makeScene()
-        -> SCNScene {
-
-        let scene =
-            SCNScene()
-
-        // --------------------------------------------------------
+    private func makeScene() -> SCNScene {
+        let scene = SCNScene()
         // Camera
-        // --------------------------------------------------------
-
-        let cameraNode =
-            SCNNode()
-
-        let camera =
-            SCNCamera()
-
-        camera.fieldOfView =
-            55
-
-        cameraNode.camera =
-            camera
-
-        cameraNode.position =
-            SCNVector3(
-                0,
-                4.8,
-                11.5
-            )
-
-        cameraNode.eulerAngles =
-            SCNVector3(
-                -0.20,
-                0,
-                0
-            )
-
-        scene.rootNode.addChildNode(
-            cameraNode
-        )
-
-        // --------------------------------------------------------
+        let cameraNode = SCNNode()
+        let camera = SCNCamera()
+        camera.fieldOfView = 55
+        cameraNode.camera = camera
+        cameraNode.position = SCNVector3(0, 4.8, 11.5)
+        cameraNode.eulerAngles = SCNVector3(-0.20, 0, 0)
+        scene.rootNode.addChildNode(cameraNode)
         // Lights
-        // --------------------------------------------------------
-
-        let ambientNode =
-            SCNNode()
-
-        let ambient =
-            SCNLight()
-
-        ambient.type =
-            .ambient
-
-        ambient.intensity =
-            500
-
-        ambientNode.light =
-            ambient
-
-        scene.rootNode.addChildNode(
-            ambientNode
-        )
-
-        let keyNode =
-            SCNNode()
-
-        let key =
-            SCNLight()
-
-        key.type =
-            .omni
-
-        key.intensity =
-            1000
-
-        keyNode.light =
-            key
-
-        keyNode.position =
-            SCNVector3(
-                2,
-                4,
-                4
-            )
-
-        scene.rootNode.addChildNode(
-            keyNode
-        )
-
-        // --------------------------------------------------------
-        // Cavity axis
-        // --------------------------------------------------------
-
-        let axisGeometry =
-            SCNCylinder(
-                radius: 0.015,
-                height: 6.0
-            )
-
-        axisGeometry.firstMaterial =
-            makeMaterial(
-                color: .darkGray,
-                emission: .clear
-            )
-
-        let axisNode =
-            SCNNode(
-                geometry:
-                    axisGeometry
-            )
-
-        axisNode.eulerAngles.x =
-            .pi / 2
-
-        scene.rootNode.addChildNode(
-            axisNode
-        )
-
-        // --------------------------------------------------------
+        let ambientNode = SCNNode()
+        let ambient = SCNLight()
+        ambient.type = .ambient
+        ambient.intensity = 500
+        ambientNode.light = ambient
+        scene.rootNode.addChildNode(ambientNode)
+        let keyNode = SCNNode()
+        let key = SCNLight()
+        key.type = .omni
+        key.intensity = 1000
+        keyNode.light = key
+        keyNode.position = SCNVector3(2, 4, 4)
+        scene.rootNode.addChildNode(keyNode)
+        // Axis
+        let axisGeometry = SCNCylinder(radius: 0.015, height: 6.0)
+        axisGeometry.firstMaterial = makeMaterial(color: .darkGray, emission: .clear)
+        let axisNode = SCNNode(geometry: axisGeometry)
+        axisNode.eulerAngles.x = .pi / 2
+        scene.rootNode.addChildNode(axisNode)
         // Gain medium
-        // --------------------------------------------------------
-
-        let gainGeometry =
-            SCNCylinder(
-                radius: 1.55,
-                height: 3.0
-            )
-
-        let gainMaterial =
-            SCNMaterial()
-
-        gainMaterial.diffuse.contents =
-            UIColor(
-                red: 0.18,
-                green: 0.35,
-                blue: 0.75,
-                alpha: 0.18
-            )
-
-        gainMaterial.emission.contents =
-            UIColor(
-                red: 0.05,
-                green: 0.15,
-                blue: 0.55,
-                alpha: 0.20
-            )
-
-        gainMaterial.transparency =
-            0.22
-
-        gainMaterial.isDoubleSided =
-            true
-
-        gainGeometry.firstMaterial =
-            gainMaterial
-
-        let gainNode =
-            SCNNode(
-                geometry:
-                    gainGeometry
-            )
-
-        gainNode.name =
-            "GainMedium"
-
-        gainNode.eulerAngles.x =
-            .pi / 2
-
-        gainNode.position =
-            SCNVector3(
-                0,
-                0,
-                3.0
-            )
-
-        scene.rootNode.addChildNode(
-            gainNode
-        )
-
-        // --------------------------------------------------------
-        // Rear mirror
-        // --------------------------------------------------------
-
-        scene.rootNode.addChildNode(
-            makeMirror(
-                name: "RearMirror",
-                z: 0.0,
-                radius: 1.8
-            )
-        )
-
-        // --------------------------------------------------------
-        // Output coupler
-        // --------------------------------------------------------
-
-        scene.rootNode.addChildNode(
-            makeMirror(
-                name: "OutputCoupler",
-                z: 6.0,
-                radius: 1.8
-            )
-        )
-
-        // --------------------------------------------------------
+        let gainGeometry = SCNCylinder(radius: 1.55, height: 3.0)
+        let gainMaterial = SCNMaterial()
+        gainMaterial.diffuse.contents = UIColor(red: 0.18, green: 0.35, blue: 0.75, alpha: 0.18)
+        gainMaterial.emission.contents = UIColor(red: 0.05, green: 0.15, blue: 0.55, alpha: 0.20)
+        gainMaterial.transparency = 0.22
+        gainMaterial.isDoubleSided = true
+        gainGeometry.firstMaterial = gainMaterial
+        let gainNode = SCNNode(geometry: gainGeometry)
+        gainNode.name = "GainMedium"
+        gainNode.eulerAngles.x = .pi / 2
+        gainNode.position = SCNVector3(0, 0, 3.0)
+        scene.rootNode.addChildNode(gainNode)
+        // Mirrors
+        scene.rootNode.addChildNode(makeMirror(name: "RearMirror", z: 0, radius: 1.8))
+        scene.rootNode.addChildNode(makeMirror(name: "OutputCoupler", z: 6, radius: 1.8))
         // Photon markers
-        // --------------------------------------------------------
-
         for id in 0..<90 {
-
-            let geometry =
-                SCNSphere(
-                    radius: 0.045
-                )
-
-            geometry.firstMaterial =
-                makeMaterial(
-                    color: .systemRed,
-                    emission: .systemOrange
-                )
-
-            let node =
-                SCNNode(
-                    geometry:
-                        geometry
-                )
-
-            node.name =
-                "PhotonMarker-\(id)"
-
-            scene.rootNode.addChildNode(
-                node
-            )
+            let geometry = SCNSphere(radius: 0.045)
+            geometry.firstMaterial = makeMaterial(color: .systemRed, emission: .systemOrange)
+            let node = SCNNode(geometry: geometry)
+            node.name = "PhotonMarker-\(id)"
+            scene.rootNode.addChildNode(node)
         }
-
-        // --------------------------------------------------------
         // Output beam
-        // --------------------------------------------------------
-
-        let beamGeometry =
-            SCNCylinder(
-                radius: 0.12,
-                height: 2.0
-            )
-
-        beamGeometry.firstMaterial =
-            makeMaterial(
-                color: .systemRed,
-                emission: .systemRed
-            )
-
-        let beamNode =
-            SCNNode(
-                geometry:
-                    beamGeometry
-            )
-
-        beamNode.name =
-            "OutputBeam"
-
-        beamNode.eulerAngles.x =
-            .pi / 2
-
-        beamNode.position =
-            SCNVector3(
-                0,
-                0,
-                7.0
-            )
-
-        beamNode.opacity =
-            0.0
-
-        scene.rootNode.addChildNode(
-            beamNode
-        )
-
-        addTraversalGuide(
-            to: scene
-        )
-
+        let beamGeometry = SCNCylinder(radius: 0.12, height: 2.0)
+        beamGeometry.firstMaterial = makeMaterial(color: .systemRed, emission: .systemRed)
+        let beamNode = SCNNode(geometry: beamGeometry)
+        beamNode.name = "OutputBeam"
+        beamNode.eulerAngles.x = .pi / 2
+        beamNode.position = SCNVector3(0, 0, 7.0)
+        beamNode.opacity = 0
+        scene.rootNode.addChildNode(beamNode)
+        addTraversalGuide(to: scene)
         return scene
     }
 
-    // MARK: Materials
-
-    private func makeMaterial(
-        color: UIColor,
-        emission: UIColor
-    ) -> SCNMaterial {
-
-        let material =
-            SCNMaterial()
-
-        material.diffuse.contents =
-            color
-
-        material.emission.contents =
-            emission
-
+    private func makeMaterial(color: UIColor, emission: UIColor) -> SCNMaterial {
+        let material = SCNMaterial()
+        material.diffuse.contents = color
+        material.emission.contents = emission
         return material
     }
 
-    private func makeMirror(
-        name: String,
-        z: Float,
-        radius: CGFloat
-    ) -> SCNNode {
-
-        let geometry =
-            SCNCylinder(
-                radius: radius,
-                height: 0.08
-            )
-
-        geometry.firstMaterial =
-            makeMaterial(
-                color: .lightGray,
-                emission: .clear
-            )
-
-        let node =
-            SCNNode(
-                geometry:
-                    geometry
-            )
-
-        node.name =
-            name
-
-        node.eulerAngles.x =
-            .pi / 2
-
-        node.position =
-            SCNVector3(
-                0,
-                0,
-                z
-            )
-
+    private func makeMirror(name: String, z: Float, radius: CGFloat) -> SCNNode {
+        let geometry = SCNCylinder(radius: radius, height: 0.08)
+        geometry.firstMaterial = makeMaterial(color: .lightGray, emission: .clear)
+        let node = SCNNode(geometry: geometry)
+        node.name = name
+        node.eulerAngles.x = .pi / 2
+        node.position = SCNVector3(0, 0, z)
         return node
     }
 
-    private func addTraversalGuide(
-        to scene: SCNScene
-    ) {
-
-        let forwardGeometry =
-            SCNCylinder(
-                radius: 0.025,
-                height: 1.2
-            )
-
-        forwardGeometry.firstMaterial =
-            makeMaterial(
-                color: .systemGreen,
-                emission: .systemGreen
-            )
-
-        let forward =
-            SCNNode(
-                geometry:
-                    forwardGeometry
-            )
-
-        forward.eulerAngles.x =
-            .pi / 2
-
-        forward.position =
-            SCNVector3(
-                2.0,
-                0,
-                2.5
-            )
-
-        scene.rootNode.addChildNode(
-            forward
-        )
-
-        let returnGeometry =
-            SCNCylinder(
-                radius: 0.025,
-                height: 1.2
-            )
-
-        returnGeometry.firstMaterial =
-            makeMaterial(
-                color: .systemBlue,
-                emission: .systemBlue
-            )
-
-        let returning =
-            SCNNode(
-                geometry:
-                    returnGeometry
-            )
-
-        returning.eulerAngles.x =
-            .pi / 2
-
-        returning.position =
-            SCNVector3(
-                -2.0,
-                0,
-                4.0
-            )
-
-        scene.rootNode.addChildNode(
-            returning
-        )
+    private func addTraversalGuide(to scene: SCNScene) {
+        let forwardGeometry = SCNCylinder(radius: 0.025, height: 1.2)
+        forwardGeometry.firstMaterial = makeMaterial(color: .systemGreen, emission: .systemGreen)
+        let forward = SCNNode(geometry: forwardGeometry)
+        forward.eulerAngles.x = .pi / 2
+        forward.position = SCNVector3(2, 0, 2.5)
+        scene.rootNode.addChildNode(forward)
+        let returnGeometry = SCNCylinder(radius: 0.025, height: 1.2)
+        returnGeometry.firstMaterial = makeMaterial(color: .systemBlue, emission: .systemBlue)
+        let returning = SCNNode(geometry: returnGeometry)
+        returning.eulerAngles.x = .pi / 2
+        returning.position = SCNVector3(-2, 0, 4)
+        scene.rootNode.addChildNode(returning)
     }
 
-    // MARK: Coordinator
-
     final class Coordinator {
-
         weak var view: SCNView?
         weak var monitor: MasterMonitor?
 
         func updateScene() {
-
-            guard
-                let scene = view?.scene,
-                let monitor
-            else {
-                return
-            }
-
-            let snapshot =
-                monitor.snapshot()
-
-            // ----------------------------------------------------
-            // Photon marker positions
-            // ----------------------------------------------------
+            guard let scene = view?.scene, let monitor else { return }
+            let snapshot = monitor.snapshot()
 
             for photon in snapshot.photons {
-
-                guard
-                    let node =
-                        scene.rootNode.childNode(
-                            withName:
-                                "PhotonMarker-\(photon.id)",
-                            recursively:
-                                true
-                        )
-                else {
-                    continue
-                }
-
-                node.position =
-                    photon.position
-
-                let coherence =
-                    snapshot.state.coherence
-
-                let alignment =
-                    max(
-                        0.0,
-                        min(
-                            1.0,
-                            (
-                                coherence - 0.70
-                            )
-                            /
-                            0.25
-                        )
-                    )
-
-                node.opacity =
-                    CGFloat(
-                        0.30
-                        +
-                        0.70 * alignment
-                    )
+                guard let node = scene.rootNode.childNode(
+                    withName: "PhotonMarker-\(photon.id)", recursively: true
+                ) else { continue }
+                node.position = photon.position
+                let coherence = snapshot.state.coherence
+                let alignment = max(0, min(1, (coherence - 0.70) / 0.25))
+                node.opacity = CGFloat(0.30 + 0.70 * alignment)
             }
 
-            // ----------------------------------------------------
-            // Gain medium intensity
-            // ----------------------------------------------------
-
-            if let gain =
-                scene.rootNode.childNode(
-                    withName:
-                        "GainMedium",
-                    recursively:
-                        true
-                ) {
-
-                gain.opacity =
-                    CGFloat(
-                        0.12
-                        +
-                        0.35
-                        *
-                        snapshot.state.coupling
-                    )
+            if let gain = scene.rootNode.childNode(withName: "GainMedium", recursively: true) {
+                gain.opacity = CGFloat(0.12 + 0.35 * snapshot.state.coupling)
             }
 
-            // ----------------------------------------------------
-            // Output beam
-            //
-            // It is driven by the authoritative transmitted
-            // output state, not merely by resonanceLocked.
-            // ----------------------------------------------------
-
-            if let beam =
-                scene.rootNode.childNode(
-                    withName:
-                        "OutputBeam",
-                    recursively:
-                        true
-                ) {
-
-                let transmitted =
-                    snapshot.state
-                        .transmittedOutputFactor
-
-                let isActive =
-                    snapshot.state.resonanceLocked
-                    &&
-                    transmitted > 0.0
-
+            if let beam = scene.rootNode.childNode(withName: "OutputBeam", recursively: true) {
+                let transmitted = snapshot.state.transmittedOutputFactor
+                let isActive = snapshot.state.resonanceLocked && transmitted > 0
                 guard isActive else {
-
-                    beam.opacity =
-                        0.0
-
+                    beam.opacity = 0
                     return
                 }
-
-                // ------------------------------------------------
-                // Normalize the transmitted field for visualization.
-                //
-                // The actual modeled transmission remains 10%.
-                // This normalization only keeps the visualization
-                // visible.
-                // ------------------------------------------------
-
-                let normalizedOutput =
-                    min(
-                        1.0,
-                        transmitted
-                        /
-                        max(
-                            0.10,
-                            1.0
-                        )
-                    )
-
-                beam.opacity =
-                    CGFloat(
-                        0.25
-                        +
-                        0.75
-                        *
-                        normalizedOutput
-                    )
-
-                // Area factor describes beam area.
-                // Radius therefore scales approximately with sqrt(A).
-
-                let areaFactor =
-                    max(
-                        0.01,
-                        snapshot.state.beamAreaFactor
-                    )
-
-                let radius =
-                    CGFloat(
-                        0.12
-                        *
-                        sqrt(areaFactor)
-                    )
-
-                if let cylinder =
-                    beam.geometry
-                    as? SCNCylinder {
-
-                    cylinder.radius =
-                        min(
-                            radius,
-                            0.30
-                        )
+                let normalizedOutput = min(1, transmitted / max(0.10, 1))
+                beam.opacity = CGFloat(0.25 + 0.75 * normalizedOutput)
+                let areaFactor = max(0.01, snapshot.state.beamAreaFactor)
+                let radius = CGFloat(0.12 * sqrt(areaFactor))
+                if let cylinder = beam.geometry as? SCNCylinder {
+                    cylinder.radius = min(radius, 0.30)
                 }
             }
 
-            // ----------------------------------------------------
-            // Output coupler appearance
-            // ----------------------------------------------------
-
-            if let coupler =
-                scene.rootNode.childNode(
-                    withName:
-                        "OutputCoupler",
-                    recursively:
-                        true
-                ) {
-
-                if snapshot.state.resonanceLocked {
-
-                    coupler.opacity =
-                        0.80
-
-                } else {
-
-                    coupler.opacity =
-                        0.45
-                }
+            if let coupler = scene.rootNode.childNode(withName: "OutputCoupler", recursively: true) {
+                coupler.opacity = snapshot.state.resonanceLocked ? 0.80 : 0.45
             }
         }
     }
 }
 
-// MARK: - Content View
+// MARK: - Content View (extended metrics)
 
 struct ContentView: View {
-
-    @StateObject private var monitor =
-        MasterMonitor()
-
+    @StateObject private var monitor = MasterMonitor()
     @State private var showAbout = false
-    private let parameters =
-        QRTLLaserParameters()
+    private let parameters = QRTLLaserParameters()
 
     var body: some View {
-        NavigationStack{
-        ZStack {
-            
-            Color.black
-                .ignoresSafeArea()
-            
-            VStack(
-                spacing: 12
-            ) {
-                
-                // ------------------------------------------------
-                // Header
-                // ------------------------------------------------
-                
-                VStack(
-                    spacing: 4
-                ) {
-                    
-                    Text(
-                        "QRTL Resonating Amplifier"
-                    )
-                    .font(
-                        .system(
-                            size: 24,
-                            weight: .bold
-                        )
-                    )
-                    .foregroundStyle(
-                        .white
-                    )
-                    
-                    Text(
-                        "2.94 µm cavity resonance simulation"
-                    )
-                    .font(
-                        .caption
-                    )
-                    .foregroundStyle(
-                        .gray
-                    )
-                }
-                
-                // ------------------------------------------------
-                // Scene
-                // ------------------------------------------------
-                
-                QRTLLaserSceneView(
-                    monitor:
-                        monitor
-                )
-                .frame(
-                    minHeight:
-                        330
-                )
-                .clipShape(
-                    RoundedRectangle(
-                        cornerRadius:
-                            16
-                    )
-                )
-                
-                // ------------------------------------------------
-                // State
-                // ------------------------------------------------
-                
-                ScrollView {
-                    
-                    VStack(
-                        alignment:
-                                .leading,
-                        spacing:
-                            8
-                    ) {
-                        
-                        Text(
-                            "CAVITY TRAVERSAL"
-                        )
-                        .font(
-                            .caption
-                                .weight(.bold)
-                        )
-                        .foregroundStyle(
-                            .gray
-                        )
-                        
-                        metricRow(
-                            "Direction",
-                            monitor.qrtlState
-                                .currentDirection
-                                .rawValue
-                        )
-                        
-                        metricRow(
-                            "Round trips",
-                            "\(monitor.qrtlState.roundTripCount)"
-                        )
-                        
-                        metricRow(
-                            "Gain crossings",
-                            "\(monitor.qrtlState.gainMediumCrossings)"
-                        )
-                        
-                        metricRow(
-                            "Physical round-trip time",
-                            formatTime(
-                                parameters
-                                    .physicalRoundTripTime
-                            )
-                        )
-                        
-                        metricRow(
-                            "Modeled physical elapsed",
-                            formatTime(
-                                monitor.qrtlState
-                                    .physicalElapsedTime
-                            )
-                        )
-                        
-                        Divider()
-                        
-                        Text(
-                            "QRTL STATE"
-                        )
-                        .font(
-                            .caption
-                                .weight(.bold)
-                        )
-                        .foregroundStyle(
-                            .gray
-                        )
-                        
-                        metricRow(
-                            "Phase error",
-                            formatRadians(
-                                monitor.qrtlState
-                                    .phaseError
-                            )
-                        )
-                        
-                        metricRow(
-                            "Phase closure",
-                            format(
-                                monitor.qrtlState
-                                    .phaseClosure
-                            )
-                        )
-                        
-                        metricRow(
-                            "Twist current",
-                            format(
-                                monitor.qrtlState
-                                    .twistCurrent
-                            )
-                        )
-                        
-                        metricRow(
-                            "Resonance response",
-                            format(
-                                monitor.qrtlState
-                                    .resonanceResponse
-                            )
-                        )
-                        
-                        metricRow(
-                            "Shell energy",
-                            format(
-                                monitor.qrtlState
-                                    .shellEnergy
-                            )
-                        )
-                        
-                        metricRow(
-                            "QRTL coupling",
-                            format(
-                                monitor.qrtlState
-                                    .coupling
-                            )
-                        )
-                        
-                        metricRow(
-                            "Coherence",
-                            format(
-                                monitor.qrtlState
-                                    .coherence
-                            )
-                        )
-                        
-                        Divider()
-                        
-                        Text(
-                            "AMPLIFICATION / MODE"
-                        )
-                        .font(
-                            .caption
-                                .weight(.bold)
-                        )
-                        .foregroundStyle(
-                            .gray
-                        )
-                        
-                        metricRow(
-                            "Coherence gain",
-                            format(
-                                monitor.qrtlState
-                                    .coherenceGain
-                            )
-                        )
-                        
-                        metricRow(
-                            "Loss gain",
-                            format(
-                                monitor.qrtlState
-                                    .lossGain
-                            )
-                        )
-                        
-                        metricRow(
-                            "Concentration gain",
-                            format(
-                                monitor.qrtlState
-                                    .concentrationGain
-                            )
-                        )
-                        
-                        metricRow(
-                            "Combined gain",
-                            format(
-                                monitor.qrtlState
-                                    .combinedGain
-                            )
-                        )
-                        
-                        Divider()
-                        
-                        Text(
-                            "RESONANCE LOCK"
-                        )
-                        .font(
-                            .caption
-                                .weight(.bold)
-                        )
-                        .foregroundStyle(
-                            .gray
-                        )
-                        
-                        metricRow(
-                            "Stable lock rounds",
-                            "\(monitor.qrtlState.stableLockRounds)"
-                            +
-                            " / "
-                            +
-                            "\(parameters.requiredStableLockRounds)"
-                        )
-                        
-                        metricRow(
-                            "Lock status",
-                            monitor.qrtlState
-                                .resonanceLocked
-                            ? "LOCKED"
-                            : "ALIGNING"
-                        )
-                        
-                        Divider()
-                        
-                        Text(
-                            "OUTPUT COUPLER"
-                        )
-                        .font(
-                            .caption
-                                .weight(.bold)
-                        )
-                        .foregroundStyle(
-                            .gray
-                        )
-                        
-                        metricRow(
-                            "Transmission",
-                            format(
-                                parameters
-                                    .outputTransmission
-                            )
-                        )
-                        
-                        metricRow(
-                            "Reflection",
-                            format(
-                                parameters
-                                    .outputReflection
-                            )
-                        )
-                        
-                        metricRow(
-                            "Circulating field",
-                            format(
-                                monitor.qrtlState
-                                    .circulatingFieldFactor
-                            )
-                        )
-                        
-                        metricRow(
-                            "Transmitted output",
-                            format(
-                                monitor.qrtlState
-                                    .transmittedOutputFactor
-                            )
-                        )
-                        
-                        metricRow(
-                            "Output events",
-                            "\(monitor.qrtlState.outputEvents)"
-                        )
-                        
-                        metricRow(
-                            "Output",
-                            monitor.qrtlState
-                                .outputEnabled
-                            ? "TRANSMITTING"
-                            : "OFF"
-                        )
-                        
-                        Divider()
-                        
-                        Text(
-                            "STANDARD LASER VALUES"
-                        )
-                        .font(
-                            .caption
-                                .weight(.bold)
-                        )
-                        .foregroundStyle(
-                            .gray
-                        )
-                        
-                        metricRow(
-                            "Wavelength",
-                            "2.94 µm"
-                        )
-                        
-                        metricRow(
-                            "Frequency",
-                            formatFrequency(
-                                parameters
-                                    .targetFrequency
-                            )
-                        )
-                        
-                        metricRow(
-                            "Photon energy",
-                            String(
-                                format:
-                                    "%.4e",
-                                parameters
-                                    .photonEnergy
-                            )
-                            +
-                            " J"
-                        )
-                        
-                        Text(
-                            "The 8-second limit is a safety timeout only. "
-                            +
-                            "It does not determine resonance lock."
-                        )
-                        .font(
-                            .caption2
-                        )
-                        .foregroundStyle(
-                            .orange
-                        )
-                        .padding(
-                            .top,
-                            4
-                        )
+        NavigationStack {
+            ZStack {
+                Color.black.ignoresSafeArea()
+                VStack(spacing: 12) {
+                    VStack(spacing: 4) {
+                        Text("QRTL Resonating Amplifier")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundStyle(.white)
+                        Text("2.94 µm cavity resonance simulation")
+                            .font(.caption)
+                            .foregroundStyle(.gray)
                     }
-                    .padding()
-                }
-                .frame(
-                    maxHeight:
-                        330
-                )
-                
-                // ------------------------------------------------
-                // Controls
-                // ------------------------------------------------
-                
-                HStack(
-                    spacing: 12
-                ) {
-                    
-                    Button {
-                        
-                        monitor.start()
-                        
-                    } label: {
-                        
-                        Label(
-                            "Ignite Cavity",
-                            systemImage:
-                                "play.fill"
-                        )
-                        .frame(
-                            maxWidth:
-                                    .infinity
-                        )
+
+                    QRTLLaserSceneView(monitor: monitor)
+                        .frame(minHeight: 330)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 8) {
+                            sectionHeader("CAVITY TRAVERSAL")
+                            metricRow("Direction", monitor.qrtlState.currentDirection.rawValue)
+                            metricRow("Round trips", "\(monitor.qrtlState.roundTripCount)")
+                            metricRow("Gain crossings", "\(monitor.qrtlState.gainMediumCrossings)")
+                            metricRow("Physical RT time", formatTime(parameters.physicalRoundTripTime))
+                            metricRow("Modeled physical elapsed", formatTime(monitor.qrtlState.physicalElapsedTime))
+
+                            Divider()
+                            sectionHeader("CURRENT → PUMP")
+                            metricRow("Drive current", String(format: "%.0f mA", parameters.driveCurrentAmps * 1000))
+                            metricRow("Threshold current", String(format: "%.0f mA", parameters.thresholdCurrentAmps * 1000))
+                            metricRow("Excess current", String(format: "%.0f mA", monitor.qrtlState.excessCurrentAmps * 1000))
+                            metricRow("Injected e⁻/s", scientific(monitor.qrtlState.injectedElectronsPerSecond))
+                            metricRow("Injection efficiency", String(format: "%.0f %%", parameters.injectionEfficiency * 100))
+                            metricRow("Useful excitations/s", scientific(monitor.qrtlState.usefulExcitationsPerSecond))
+
+                            Divider()
+                            sectionHeader("CALCIUM / QRTL LATTICE")
+                            metricRow("Lattice coherence (via QRTL)", format(monitor.qrtlState.coherence))
+                            metricRow("QRTL→EM coupling proxy", format(monitor.qrtlState.qrtlToEMCouplingProxy))
+                            metricRow("Population inversion proxy", format(monitor.qrtlState.populationInversionProxy))
+                            metricRow("Excitation fraction", format(monitor.qrtlState.latticeExcitationFraction))
+                            metricRow("Photon generation rate", scientific(monitor.qrtlState.photonGenerationRate) + " /s")
+
+                            Divider()
+                            sectionHeader("QRTL STATE")
+                            metricRow("Phase error", formatRadians(monitor.qrtlState.phaseError))
+                            metricRow("Phase closure", format(monitor.qrtlState.phaseClosure))
+                            metricRow("Twist current", format(monitor.qrtlState.twistCurrent))
+                            metricRow("Resonance response", format(monitor.qrtlState.resonanceResponse))
+                            metricRow("Shell energy", format(monitor.qrtlState.shellEnergy))
+                            metricRow("QRTL coupling", format(monitor.qrtlState.coupling))
+
+                            Divider()
+                            sectionHeader("AMPLIFICATION / MODE")
+                            metricRow("Coherence gain", format(monitor.qrtlState.coherenceGain))
+                            metricRow("Loss gain", format(monitor.qrtlState.lossGain))
+                            metricRow("Concentration gain", format(monitor.qrtlState.concentrationGain))
+                            metricRow("Combined gain", format(monitor.qrtlState.combinedGain))
+
+                            Divider()
+                            sectionHeader("SPECTRUM (FFT of lattice signal)")
+                            metricRow("Target wavelength", "2.94 µm")
+                            if let simλ = monitor.qrtlState.simulatedDominantWavelengthMeters {
+                                metricRow("Simulated dominant λ", String(format: "%.4f µm", simλ * 1e6))
+                            } else {
+                                metricRow("Simulated dominant λ", "—")
+                            }
+                            if let close = monitor.qrtlState.wavelengthClosenessPercent {
+                                metricRow("Closeness to target", String(format: "%.1f %%", close))
+                            }
+                            metricRow("Target frequency", formatFrequency(parameters.targetFrequency))
+                            metricRow("Photon energy", String(format: "%.4e J (≈ 0.422 eV)", parameters.photonEnergy))
+
+                            Divider()
+                            sectionHeader("RESONANCE LOCK")
+                            metricRow("Stable lock rounds",
+                                      "\(monitor.qrtlState.stableLockRounds) / \(parameters.requiredStableLockRounds)")
+                            metricRow("Lock status", monitor.qrtlState.resonanceLocked ? "LOCKED" : "ALIGNING")
+
+                            Divider()
+                            sectionHeader("OUTPUT COUPLER")
+                            metricRow("Transmission", format(parameters.outputTransmission))
+                            metricRow("Reflection", format(parameters.outputReflection))
+                            metricRow("Circulating field", format(monitor.qrtlState.circulatingFieldFactor))
+                            metricRow("Transmitted output", format(monitor.qrtlState.transmittedOutputFactor))
+                            metricRow("Output events", "\(monitor.qrtlState.outputEvents)")
+                            metricRow("Output", monitor.qrtlState.outputEnabled ? "TRANSMITTING" : "OFF")
+
+                            Text("Safety timeout is \(Int(parameters.maximumSimulationDuration)) s only; it does not create lock. Lock requires phase closure, coupling, coherence, positive inversion, and FFT mode within tolerance of 2.94 µm.")
+                                .font(.caption2)
+                                .foregroundStyle(.orange)
+                                .padding(.top, 4)
+                        }
+                        .padding()
                     }
-                    .buttonStyle(
-                        .borderedProminent
-                    )
-                    
-                    Button {
-                        
-                        monitor.reset()
-                        
-                    } label: {
-                        
-                        Label(
-                            "Reset",
-                            systemImage:
-                                "arrow.counterclockwise"
-                        )
-                        .frame(
-                            maxWidth:
-                                    .infinity
-                        )
+                    .frame(maxHeight: 360)
+
+                    HStack(spacing: 12) {
+                        Button { monitor.start() } label: {
+                            Label("Ignite Cavity", systemImage: "play.fill")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+
+                        Button { monitor.reset() } label: {
+                            Label("Reset", systemImage: "arrow.counterclockwise")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
                     }
-                    .buttonStyle(
-                        .bordered
-                    )
+                    .padding(.horizontal)
                 }
-                .padding(
-                    .horizontal
-                )
-            }}
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showAbout = true
-                } label: {
-                    Image(systemName: "info.circle")
-                }
-                .accessibilityLabel("Information")
             }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showAbout = true } label: {
+                        Image(systemName: "info.circle")
                     }
+                    .accessibilityLabel("Information")
+                }
+            }
             .padding()
-            .sheet(
-                isPresented: $showAbout
-            ) {
-
-                NavigationStack {
-
-                    AboutView()
-                }
-                .preferredColorScheme(
-                    .dark
-                )
+            .sheet(isPresented: $showAbout) {
+                NavigationStack { AboutView() }
+                    .preferredColorScheme(.dark)
             }
         }
     }
 
-    // MARK: Metric Row
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title)
+            .font(.caption.weight(.bold))
+            .foregroundStyle(.gray)
+    }
 
-    private func metricRow(
-        _ title: String,
-        _ value: String
-    ) -> some View {
-
+    private func metricRow(_ title: String, _ value: String) -> some View {
         HStack {
-
-            Text(title)
-                .foregroundStyle(
-                    .gray
-                )
-
+            Text(title).foregroundStyle(.gray)
             Spacer()
-
             Text(value)
-                .font(
-                    .system(
-                        .body,
-                        design:
-                            .monospaced
-                    )
-                )
-                .foregroundStyle(
-                    .white
-                )
+                .font(.system(.body, design: .monospaced))
+                .foregroundStyle(.white)
         }
     }
 
-    private func format(
-        _ value: Double
-    ) -> String {
-
-        String(
-            format:
-                "%.4f",
-            value
-        )
+    private func format(_ value: Double) -> String {
+        String(format: "%.4f", value)
     }
 
-    private func formatRadians(
-        _ value: Double
-    ) -> String {
-
-        String(
-            format:
-                "%.4f rad",
-            value
-        )
+    private func formatRadians(_ value: Double) -> String {
+        String(format: "%.4f rad", value)
     }
 
-    private func formatFrequency(
-        _ value: Double
-    ) -> String {
-
-        String(
-            format:
-                "%.4f THz",
-            value / 1.0e12
-        )
+    private func formatFrequency(_ value: Double) -> String {
+        String(format: "%.4f THz", value / 1e12)
     }
 
-    private func formatTime(
-        _ value: Double
-    ) -> String {
-
-        if value < 1.0e-6 {
-
-            return String(
-                format:
-                    "%.2f ns",
-                value * 1.0e9
-            )
-
-        } else {
-
-            return String(
-                format:
-                    "%.4e s",
-                value
-            )
+    private func formatTime(_ value: Double) -> String {
+        if value < 1e-6 {
+            return String(format: "%.2f ns", value * 1e9)
         }
+        return String(format: "%.4e s", value)
+    }
+
+    private func scientific(_ value: Double) -> String {
+        String(format: "%.3e", value)
+    }
+}
+
+// Placeholder About view (keep or replace with your existing one)
+struct AboutView: View {
+    var body: some View {
+        Text("QRTL 2.94 µm laser cavity simulation\n\nAll optical quantities derived from lattice + current model are simulation proxies.")
+            .padding()
+            .navigationTitle("About")
     }
 }
